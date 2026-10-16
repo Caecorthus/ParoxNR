@@ -20,9 +20,11 @@ public class BartenderPlayerComponent implements AutoSyncedComponent, ServerTick
 
     private final PlayerEntity player;
     public int glowTicks = 0;
+    public int drinkTasksCompleted = 0;
 
     public void reset() {
         this.glowTicks = 0;
+        this.drinkTasksCompleted = 0;
         this.sync();
     }
 
@@ -71,9 +73,11 @@ public class BartenderPlayerComponent implements AutoSyncedComponent, ServerTick
 
     public void writeToNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         tag.putInt("glowTicks", this.glowTicks);
+        tag.putInt("drinkTasksCompleted", this.drinkTasksCompleted);
     }
 
     public void readFromNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         this.glowTicks = tag.contains("glowTicks") ? tag.getInt("glowTicks") : 0;
+        this.drinkTasksCompleted = tag.contains("drinkTasksCompleted") ? tag.getInt("drinkTasksCompleted") : 0;
     }
 }

@@ -49,6 +49,26 @@ public class CocktailRegistry {
         register("cocktail.noellesroles.see_you_tomorrow",   0x4B0082, "gin", "whiskey", "tequila"); // 靛蓝
         register("cocktail.noellesroles.tequila_sunrise",    0xFF4500, "gin", "vodka", "tequila");   // 橙红
         register("cocktail.noellesroles.witchs_remedy",      0x556B2F, "whiskey", "vodka", "tequila"); // 暗橄榄绿
+
+        // 白兰地系列（1 种调剂）
+        register("cocktail.noellesroles.sidecar",            0xD9A441, "brandy");                  // 边车·琥珀金
+        // 白兰地系列（2 种调剂）
+        register("cocktail.noellesroles.coquette",           0xD98CA5, "brandy", "rum");           // 千娇百媚·娇粉
+        register("cocktail.noellesroles.trantin",            0xC9A66B, "brandy", "gin");           // 特朗坦·浅棕
+        register("cocktail.noellesroles.nikolas",            0xF0D9A6, "brandy", "vodka");         // 尼古拉斯·淡金
+        register("cocktail.noellesroles.alexander",          0xEAD9C0, "brandy", "tequila");       // 亚历山大·奶油
+        register("cocktail.noellesroles.one_more_road",      0x9C6B30, "brandy", "whiskey");       // 多一条路·深棕
+        // 白兰地系列（3 种调剂）
+        register("cocktail.noellesroles.nightcap",           0x6B4226, "brandy", "rum", "gin");     // 睡帽·暗褐
+        register("cocktail.noellesroles.brandy_fix",         0xC98A45, "brandy", "rum", "vodka");   // 白兰地修复·琥珀
+        register("cocktail.noellesroles.horses_neck",        0xD9B26B, "brandy", "rum", "tequila"); // 马脖·姜黄
+        register("cocktail.noellesroles.witch_elizabeth",    0x7A4E8C, "brandy", "rum", "whiskey"); // 女巫伊丽莎白·巫紫
+        register("cocktail.noellesroles.champs_elysees",     0xE3B34B, "brandy", "gin", "vodka");   // 香榭丽舍大街·金
+        register("cocktail.noellesroles.honeymoon",          0xF2D57A, "brandy", "gin", "tequila"); // 蜜月·蜜金
+        register("cocktail.noellesroles.olympic",            0xD99A3C, "brandy", "gin", "whiskey"); // 奥林匹克·铜金
+        register("cocktail.noellesroles.dream",              0xB8CDE0, "brandy", "vodka", "tequila"); // 梦·梦蓝
+        register("cocktail.noellesroles.baltimore_trailblazer", 0xA85F2E, "brandy", "vodka", "whiskey"); // 巴尔的摩开拓者·开拓棕
+        register("cocktail.noellesroles.via_veneto",         0xB5651D, "brandy", "tequila", "whiskey"); // 威尼托大街·威尼托琥珀
     }
 
     private static void register(String translationKey, int color, String... ingredientIds) {

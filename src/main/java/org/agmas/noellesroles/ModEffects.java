@@ -11,6 +11,7 @@ import org.agmas.noellesroles.effect.NoCollisionEffect;
 import org.agmas.noellesroles.effect.WhiskeyShieldEffect;
 import org.agmas.noellesroles.effect.FractureEffect;
 import org.agmas.noellesroles.effect.BoneSettingEffect;
+import org.agmas.noellesroles.effect.UnlimitedRangeEffect;
 
 public class ModEffects {
     public static final RegistryEntry<StatusEffect> STIMULATION = Registry.registerReference(
@@ -47,6 +48,12 @@ public class ModEffects {
             Registries.STATUS_EFFECT,
             Identifier.of(Noellesroles.MOD_ID, "bone_setting"),
             new BoneSettingEffect()
+    );
+
+    public static final RegistryEntry<StatusEffect> UNLIMITED_RANGE = Registry.registerReference(
+            Registries.STATUS_EFFECT,
+            Identifier.of(Noellesroles.MOD_ID, "unlimited_range"),
+            new UnlimitedRangeEffect()
     );
 
     public static void init() {

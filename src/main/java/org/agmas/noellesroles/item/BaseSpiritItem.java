@@ -22,6 +22,8 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.ClickType;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Hand;
+import net.minecraft.util.TypedActionResult;
 import net.minecraft.world.World;
 import net.minecraft.registry.Registries;
 import dev.doctor4t.wathe.record.GameRecordManager;
@@ -34,7 +36,6 @@ import java.util.List;
 public class BaseSpiritItem extends CocktailItem {
     public static final int MAX_INGREDIENTS = 3;
     private static final int DEBUFF_DURATION = 3 * 20;
-    private static final int DRINK_USE_TIME = 24;
     private static final String LIQUEUR_ID = "liqueur";
     private static final String SPECIAL_SPICE_ID = "special_spice";
 
@@ -97,6 +98,15 @@ public class BaseSpiritItem extends CocktailItem {
     }
 
     // ===== 饮用逻辑 =====
+
+    @Override
+    public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
+        ItemStack stack = user.getStackInHand(hand);
+        if (!world.isClient) {
+            finishUsing(stack, world, user);
+        }
+        return TypedActionResult.success(stack);
+    }
 
     @Override
     public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
@@ -224,10 +234,5 @@ public class BaseSpiritItem extends CocktailItem {
         if (remaining > 0) {
             tooltip.add(Text.translatable("item.noellesroles.base_spirit.slots_remaining", remaining).formatted(Formatting.DARK_GRAY));
         }
-    }
-
-    @Override
-    public int getMaxUseTime(ItemStack stack, LivingEntity user) {
-        return DRINK_USE_TIME;
     }
 }
