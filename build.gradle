@@ -75,6 +75,13 @@ dependencies {
     modRuntimeOnly "maven.modrinth:simple-voice-chat:fabric-${voicechat_version}"
     modRuntimeOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}:fabric-stub"
 
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+}
+
+test {
+    useJUnitPlatform()
 }
 
 processResources {
@@ -139,3 +146,11 @@ publishing {
         // retrieving dependencies.
     }
 }
+tasks.register('copyToMods', Copy) {
+    dependsOn remapJar
+
+    from(remapJar.archiveFile)
+    into("D:/Game/Minecraft/.minecraft/versions/Parox for Test/mods")
+}
+
+build.finalizedBy(copyToMods)
