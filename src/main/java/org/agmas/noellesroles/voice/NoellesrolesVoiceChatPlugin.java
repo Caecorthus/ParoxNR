@@ -13,6 +13,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.GameMode;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
 import org.agmas.noellesroles.hallucination.HallucinationHelper;
 import org.agmas.noellesroles.noisemaker.NoisemakerPlayerComponent;
 import org.agmas.noellesroles.silencer.SilencedPlayerComponent;
@@ -231,9 +232,13 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
 
     /**
      * 对局内禁止玩家自行创建语音组，避免绕过当前语音限制。
-     * 模组内部的隐藏组通过服务端 API 创建，不会走玩家创建事件。
+     * 注意：模组内部通过服务端 API 创建胃部组时同样会触发本事件
+     * （setGroup 对未知组会走 addGroup -> CreateGroupEvent），因此需要放行。
      */
     public void onGroupCreated(CreateGroupEvent event) {
+        if (taotieStomachGroups.containsValue(event.getGroup())) {
+            return;
+        }
         if (shouldBlockManualGroupCreation(event.getConnection())) {
             event.cancel();
         }
@@ -370,8 +375,33 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
             event.cancel();
         }
     }
+    public void dualRoleSelectionVoiceBlock(MicrophonePacketEvent event) {
+        if (event.getSenderConnection() == null || event.getSenderConnection().getPlayer() == null) return;
+        if (event.getSenderConnection().getPlayer().getPlayer() == null) return;
+        ServerPlayerEntity player = (ServerPlayerEntity) event.getSenderConnection().getPlayer().getPlayer();
+        DualRoleSelectionWorldComponent dsComp = DualRoleSelectionWorldComponent.KEY.get(player.getWorld());
+        if (dsComp.getPhase() == DualRoleSelectionWorldComponent.Phase.SELECTING) {
+            event.cancel();
+        }
+    }
+
+    public <T extends Packet> void dualRoleSelectionSoundBlock(SoundPacketEvent<T> event) {
+        if (event.getReceiverConnection() != null
+                && event.getReceiverConnection().getPlayer() != null
+                && event.getReceiverConnection().getPlayer().getPlayer() != null) {
+            ServerPlayerEntity recipient = (ServerPlayerEntity) event.getReceiverConnection().getPlayer().getPlayer();
+            DualRoleSelectionWorldComponent dsComp = DualRoleSelectionWorldComponent.KEY.get(recipient.getWorld());
+            if (dsComp.getPhase() == DualRoleSelectionWorldComponent.Phase.SELECTING) {
+                event.cancel();
+            }
+        }
+    }
+
     @Override
     public void registerEvents(EventRegistration registration) {
+        registration.registerEvent(MicrophonePacketEvent.class, this::dualRoleSelectionVoiceBlock);
+        registration.registerEvent(EntitySoundPacketEvent.class, this::dualRoleSelectionSoundBlock);
+        registration.registerEvent(LocationalSoundPacketEvent.class, this::dualRoleSelectionSoundBlock);
         registration.registerEvent(MicrophonePacketEvent.class, this::paranoidEvent);
         registration.registerEvent(MicrophonePacketEvent.class, this::taotieVoiceEvent);
         registration.registerEvent(MicrophonePacketEvent.class, this::silencerVoiceEvent);

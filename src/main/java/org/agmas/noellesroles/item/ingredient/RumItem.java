@@ -12,7 +12,7 @@ public class RumItem extends IngredientItem {
 
     @Override
     public void applyEffect(ServerPlayerEntity player, EffectContext context) {
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, context.scaleDuration(7 * 20), 1, false, false, true));
+        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, context.scaleDuration(10 * 20), 1, false, false, true));
         addMoodBonus(player, 0.2f, context);
     }
 
@@ -23,6 +23,6 @@ public class RumItem extends IngredientItem {
 
     @Override
     public int getShopPrice() {
-        return 100;
+        return 50;
     }
 }

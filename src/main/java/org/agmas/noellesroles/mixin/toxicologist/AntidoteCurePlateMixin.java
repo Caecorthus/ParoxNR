@@ -18,6 +18,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.agmas.noellesroles.ModItems;
 import org.agmas.noellesroles.item.AntidoteItem;
+import org.agmas.noellesroles.toxicologist.AntidotePlateShieldComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -34,7 +35,10 @@ public abstract class AntidoteCurePlateMixin {
         if (player.getItemCooldownManager().isCoolingDown(ModItems.ANTIDOTE)) return;
 
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        if (blockEntity instanceof BeveragePlateBlockEntity plate && plate.getPoisoner() != null) {
+        if (!(blockEntity instanceof BeveragePlateBlockEntity plate)) return;
+
+        if (plate.getPoisoner() != null) {
+            // 已中毒：清除毒素
             plate.setPoisoner(null);
             world.playSound(null, pos, SoundEvents.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 1.0F, 1.2F);
             player.getItemCooldownManager().set(ModItems.ANTIDOTE, AntidoteItem.COOLDOWN_TICKS);
@@ -43,6 +47,15 @@ public abstract class AntidoteCurePlateMixin {
                 extra.putString("action", "cure_plate");
                 GameRecordManager.putBlockPos(extra, "pos", pos);
                 GameRecordManager.recordItemUse(serverPlayer, Registries.ITEM.getId(ModItems.ANTIDOTE), null, extra);
+            }
+            cir.setReturnValue(ActionResult.SUCCESS);
+        } else {
+            // 未中毒：施加预防护，使下一次下毒无效。静音，不留记录
+            AntidotePlateShieldComponent shieldComp = AntidotePlateShieldComponent.KEY.get(world);
+            if (!shieldComp.hasShield(pos)) {
+                shieldComp.applyShield(pos);
+                AntidotePlateShieldComponent.KEY.sync(world);
+                player.getItemCooldownManager().set(ModItems.ANTIDOTE, AntidoteItem.COOLDOWN_TICKS);
             }
             cir.setReturnValue(ActionResult.SUCCESS);
         }

@@ -3,6 +3,7 @@ package org.agmas.noellesroles.mixin.wathe;
 import dev.doctor4t.wathe.cca.MapVotingComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
 import java.util.List;
 
@@ -28,4 +29,16 @@ public interface MapVotingComponentAccessor {
 
     @Accessor("selectedMapIndex")
     void noellesroles$setSelectedMapIndex(int selectedMapIndex);
+
+    @Accessor("votingActive")
+    boolean noellesroles$isVotingActive();
+
+    @Accessor("roulettePhase")
+    boolean noellesroles$isRoulettePhase();
+
+    @Invoker("finishSelection")
+    void noellesroles$invokeFinishSelection();
+
+    @Invoker("endVoting")
+    void noellesroles$invokeEndVoting(boolean ignoreMinPlayers);
 }

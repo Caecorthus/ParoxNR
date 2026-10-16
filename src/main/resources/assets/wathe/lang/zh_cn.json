@@ -466,7 +466,7 @@
   "screen.wathe.walkie_talkie.channel": "频道",
   "tooltip.wathe.walkie_talkie.channel": "频道: %s",
   "tooltip.wathe.walkie_talkie.hold": "手持即可发射语音",
-  "tooltip.wathe.walkie_talkie.right_click": "右键切换频道",
+  "tooltip.wathe.walkie_talkie.right_click": "右键切换频道（0~33）",
 
   "gui.wathe.map_voting.title": "选择下一张地图",
   "gui.wathe.map_voting.selecting": "正在选择地图...",

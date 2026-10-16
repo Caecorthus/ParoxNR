@@ -6,7 +6,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Language;
-import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 
 import java.util.*;
@@ -70,9 +69,8 @@ public class RoleInfoRegistry {
     }
 
     public static String getModeCategoryId(Identifier gameModeId) {
-        if (Noellesroles.MURDER_MAYHEM_ID.equals(gameModeId)) {
-            return CATEGORY_MURDER_MAYHEM;
-        }
+        // 迷乱谋杀模式已废弃：其分类节点不再出现在说明界面里，所以这里把它归到经典谋杀分类，
+        // 避免任何路径（例如 skipModeVoting 沿用上一局模式）把界面导航到一个永远显示不出来的隐藏页。
         if (WatheGameModes.LOOSE_ENDS_ID.equals(gameModeId)) {
             return CATEGORY_LOOSE_ENDS;
         }
@@ -80,9 +78,6 @@ public class RoleInfoRegistry {
     }
 
     public static String getModeOverviewPageId(Identifier gameModeId) {
-        if (Noellesroles.MURDER_MAYHEM_ID.equals(gameModeId)) {
-            return CATEGORY_MURDER_MAYHEM;
-        }
         if (WatheGameModes.LOOSE_ENDS_ID.equals(gameModeId)) {
             return CATEGORY_LOOSE_ENDS_OVERVIEW;
         }
@@ -174,13 +169,15 @@ public class RoleInfoRegistry {
     // ==================== Default Hardcoded Registry ====================
 
     private static RoleInfoData r(String id) {
-        return new RoleInfoData(
+        RoleInfoData info = new RoleInfoData(
                 id,
                 "tr:announcement.role." + id,
                 "tr:" + factionLabelKeyForRole(id),
                 "tr:announcement.goals." + id,
                 "tr:" + winConditionKeyForRole(id)
         );
+        info.summaryKey = "tr:roleinfo.summary." + id;
+        return info;
     }
 
     private static String factionLabelKeyForRole(String roleId) {
@@ -223,8 +220,8 @@ public class RoleInfoRegistry {
         Set<String> killer = Set.of(
                 "killer",
                 "morphling", "phantom", "swapper", "the_insane_damned_paranoid_killer", "bomber", "assassin",
-                "scavenger", "serial_killer", "silencer", "poisoner", "bandit", "hunter", "commander"
-                , "breacher"
+                "scavenger", "serial_killer", "silencer", "poisoner", "bandit", "hunter", "commander",
+                "breacher", "phonism", "dream_eater"
         );
         Set<String> neutral = Set.of("jester", "vulture", "corrupt_cop", "gangster_star", "pathogen", "taotie", "criminal_reasoner", "ferryman");
         if (killer.contains(roleId)) return "killer";
@@ -254,13 +251,15 @@ public class RoleInfoRegistry {
                 .addPassiveSkill("trap_vision")); // 可见猎人捕兽夹
 
         // 亡命徒
-        m.put(ROLE_LOOSE_END, new RoleInfoData(
+        RoleInfoData looseEnd = new RoleInfoData(
                 "loose_end",
                 "tr:announcement.role.loose_end",
                 null,
                 "tr:announcement.loose_ends.goal",
                 "tr:roleinfo.win_condition.loose_end"
-        ));
+        );
+        looseEnd.summaryKey = "tr:roleinfo.summary.loose_end";
+        m.put(ROLE_LOOSE_END, looseEnd);
 
         // ===================== 杀手阵营 =====================
 
@@ -269,7 +268,9 @@ public class RoleInfoRegistry {
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use") // 本能
                 .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open") // 商店
                 .addSkillWithSharedTrigger("morph", "ability2", "shared.trigger.active_menu") // 变形成目标
-                .addActiveUseSkill("corpse_mode", "ability")); // 尸体伪装
+                .addActiveUseSkill("corpse_mode", "ability") // 尸体伪装
+                .addShopSkill("myriad_changes") // 万千变化（商店购买）
+                .addShopSkill("forged_potion")); // 赝造药水（商店购买）
 
         // 幽灵
         m.put("noellesroles:phantom", r("phantom")
@@ -313,8 +314,8 @@ public class RoleInfoRegistry {
         m.put("noellesroles:serial_killer", r("serial_killer")
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use") // 本能
                 .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open") // 商店
-                .addRoundStartSkill("target_lock") // 锁定追杀目标
-                .addPassiveSkill("bonus_kill")); // 击杀目标获得奖励
+                .addActiveUseSkill("psycho_rage", "ability") // 疯魔爆发
+                .addPassiveSkill("nimble_knife")); // 快刀（冷却减半）
 
         // 静语者
         m.put("noellesroles:silencer", r("silencer")
@@ -335,7 +336,9 @@ public class RoleInfoRegistry {
         m.put("noellesroles:bandit", r("bandit")
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use") // 本能
                 .addSkillWithSharedTrigger("shop", "inventory", "shared.trigger.inventory_open") // 商店
-                .addItemEffectSkill("throwing_axe")); // 飞斧
+                .addItemEffectSkill("throwing_axe") // 飞斧
+                .addActiveUseSkill("volley", "ability") // 掷出全部飞斧
+                .addShopSkill("recover_axes")); // 回收飞斧（商店购买）
 
         // 指挥官
         m.put("noellesroles:commander", r("commander")
@@ -349,6 +352,19 @@ public class RoleInfoRegistry {
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use")
                 .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open")
                 .addActiveUseSkill("create_break_point", "ability"));
+
+        m.put("noellesroles:phonism", r("phonism")
+                .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use")
+                .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open")
+                .addActiveUseSkill("hallucinate", "ability"));
+
+        // 噬梦者
+        m.put("noellesroles:dream_eater", r("dream_eater")
+                .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use")
+                .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open")
+                .addActiveUseSkill("dream_mark", "ability")
+                .addItemEffectSkill("sleeping_pill")
+                .addPassiveSkill("sleep_vision"));
 
         // ===================== 乘客阵营 =====================
 
@@ -364,7 +380,8 @@ public class RoleInfoRegistry {
         m.put("noellesroles:bartender", r("bartender")
                 .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger") // 乘客基础能力
                 .addSkillWithSharedTrigger("shop", "inventory", "shared.trigger.inventory_open") // 佳酿商店
-                .addPassiveSkill("see_drinkers")); // 观察喝过酒的玩家
+                .addPassiveSkill("see_drinkers") // 观察喝过酒的玩家
+                .addPassiveSkill("wine_tasting")); // 每完成两次喝点东西任务获得调酒材料
 
         // 大嗓门
         m.put("noellesroles:noisemaker", r("noisemaker")
@@ -375,7 +392,7 @@ public class RoleInfoRegistry {
         // 巫毒师
         m.put("noellesroles:voodoo", r("voodoo")
                 .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
-                .addSkillWithSharedTrigger("bind_curse", "ability", "shared.trigger.active_menu")); // 绑定巫毒诅咒
+                .addShopSkill("bind_curse")); // 购买巫毒娃娃并绑定诅咒
 
         // 验尸官
         m.put("noellesroles:coroner", r("coroner")
@@ -431,8 +448,7 @@ public class RoleInfoRegistry {
         // 保镖
         m.put("noellesroles:bodyguard", r("bodyguard")
                 .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
-                .addPassiveSkill("protect") // 守护目标并替死
-                .addPassiveSkill("see_target")); // 可以透视要保护的目标
+                .addActiveUseSkill("defensive_stance", "ability")); // 空手按G进入潜行姿态,正面格挡刀刺/球棒
 
         // 生存大师
         m.put("noellesroles:survival_master", r("survival_master")
@@ -469,6 +485,30 @@ public class RoleInfoRegistry {
                 .addSharedNamedPassiveSkill("passenger", "shared.name.passenger")
                 .addPassiveSkill("divine_focus")
                 .addActiveUseSkill("hellfire", "ability"));
+
+        // 报丧
+        m.put("noellesroles:baosang", r("baosang")
+                .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
+                .addPassiveSkill("death_sense"));
+
+        // 拾荒者
+        m.put("noellesroles:junker", r("junker")
+                .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
+                .addPassiveSkill("loot_vision")
+                .addActiveUseSkill("search_corpse", "ability"));
+
+        // 经济学家
+        m.put("noellesroles:economist", r("economist")
+                .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
+                .addShopSkill("shop")
+                .addItemEffectSkill("economic_report"));
+
+        // 白骑士
+        m.put("noellesroles:white_knight", r("white_knight")
+                .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
+                .addInitialItemSkill("revolver")
+                .addPassiveSkill("psycho_vision")
+                .addPassiveSkill("bounty"));
 
         // ===================== 中立阵营 =====================
 
@@ -512,12 +552,15 @@ public class RoleInfoRegistry {
                 .addSharedNamedPassiveSkill("no_sanity", "shared.name.neutral") // 没有理智值
                 .addSkillWithSharedNameEffectAndTrigger("neutral_master_key", null, "shared.name.neutral_master_key", "shared.effect.neutral_master_key", "shared.trigger.initial_item") // 中立万能钥匙
                 .addSharedPassiveSkill("block_victory") // 阻止其他阵营获胜
+                .addPassiveSkill("gluttony") // 暴食：饥饿值机制
                 .addActiveUseSkill("swallow_skill", "ability") // 吞噬玩家
                 .addSkill("moment")); // 触发饕餮时刻
 
         m.put("noellesroles:criminal_reasoner", r("criminal_reasoner")
                 .addSharedNamedPassiveSkill("neutral", "shared.name.neutral")
-                .addActiveUseSkill("reason", "ability"));
+                .addSkillWithSharedNameEffectAndTrigger("neutral_master_key", null, "shared.name.neutral_master_key", "shared.effect.neutral_master_key", "shared.trigger.initial_item") // 中立万能钥匙
+                .addActiveUseSkill("reason", "ability") // 推理命案
+                .addSkillWithSharedTrigger("invisibility", "ability2", "shared.trigger.active_use")); // 推理成功奖励的隐身
 
         m.put("noellesroles:ferryman", r("ferryman")
                 .addSharedNamedHoldUseSkill("neutral", "instinct", "shared.name.neutral")

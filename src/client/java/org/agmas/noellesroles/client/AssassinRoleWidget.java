@@ -22,11 +22,11 @@ public class AssassinRoleWidget extends ButtonWidget {
     private final int clipRight;
     private final int clipBottom;
 
-    public AssassinRoleWidget(int x, int y, Role role, UUID targetPlayer,
+    public AssassinRoleWidget(int x, int y, Role role, UUID targetPlayer, boolean fromBook,
                               int clipLeft, int clipTop, int clipRight, int clipBottom) {
         super(x, y, 90, 20, Text.empty(),
                 button -> {
-                    ClientPlayNetworking.send(new AssassinGuessRoleC2SPacket(targetPlayer, role.identifier()));
+                    ClientPlayNetworking.send(new AssassinGuessRoleC2SPacket(targetPlayer, role.identifier(), fromBook));
                     if (MinecraftClient.getInstance().player != null) {
                         MinecraftClient.getInstance().player.closeHandledScreen();
                     }

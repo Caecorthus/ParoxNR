@@ -5,6 +5,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
+import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
 import org.agmas.noellesroles.murdermayhem.MurderMayhemHelper;
 import org.agmas.noellesroles.murdermayhem.MurderMayhemWorldComponent;
 import org.jetbrains.annotations.NotNull;
@@ -46,6 +47,11 @@ public final class MurderMayhemIntroHudRenderer {
     }
 
     public static void tick(@NotNull ClientPlayerEntity player) {
+        // 选择期间介绍倒计时暂停，客户端与服务端同步，避免介绍提前播完再重播
+        if (DualRoleSelectionWorldComponent.isSelectionFreezeActive(player.getWorld())) {
+            return;
+        }
+
         GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
         if (!MurderMayhemHelper.isMurderMayhem(gameWorld.getGameMode())) {
             return;

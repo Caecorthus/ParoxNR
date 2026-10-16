@@ -42,14 +42,14 @@ public abstract class MorphlingHudMixin {
             }
 
             drawY -= getTextRenderer().getWrappedLinesHeight(line, 999999);
-            context.drawTextWithShadow(getTextRenderer(), line, context.getScaledWindowWidth() - getTextRenderer().getWidth(line), drawY, Noellesroles.MORPHLING.color());
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), line, 0, drawY, Noellesroles.MORPHLING.color());
 
             // 尸体模式提示（一行显示状态+操作）
             Text corpseHint = Text.translatable(morphlingPlayerComponent.corpseMode
                     ? "tip.morphling.corpse_active" : "tip.morphling.corpse_hint",
                     NoellesrolesClient.abilityBind.getBoundKeyLocalizedText());
             drawY -= getTextRenderer().getWrappedLinesHeight(corpseHint, 999999);
-            context.drawTextWithShadow(getTextRenderer(), corpseHint, context.getScaledWindowWidth() - getTextRenderer().getWidth(corpseHint), drawY, Noellesroles.MORPHLING.color());
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), corpseHint, 0, drawY, Noellesroles.MORPHLING.color());
         }
     }
 }

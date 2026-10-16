@@ -10,6 +10,7 @@ import net.minecraft.text.Text;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.util.HudRenderHelper;
 import org.agmas.noellesroles.client.util.rolehud.BreacherHudRenderer;
+import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,6 +28,7 @@ public abstract class BreacherHudMixin {
 
         GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
         if (!gameWorld.isRole(player, Noellesroles.BREACHER)) return;
+        if (SwallowedPlayerComponent.isPlayerSwallowed(player)) return;
 
         Text line = BreacherHudRenderer.getLine(player);
         HudRenderHelper.pushAboveVoiceChatHudLayer(context);

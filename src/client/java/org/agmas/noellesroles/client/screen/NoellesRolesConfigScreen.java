@@ -521,6 +521,13 @@ public class NoellesRolesConfigScreen extends Screen {
                 return new NumberSliderWidget(this, numberOption);
             }
 
+            if (option instanceof ConfigOptionDefinition.NumberInputOptionDefinition numberInputOption) {
+                TextFieldWidget field = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, option.label());
+                field.setMaxLength(numberInputOption.maxDigits());
+                field.setChangedListener(value -> onNumberInputChanged(numberInputOption, field, value));
+                return field;
+            }
+
             if (option instanceof ConfigOptionDefinition.TextOptionDefinition textOption) {
                 TextFieldWidget field = new TextFieldWidget(textRenderer, 0, 0, CONTROL_WIDTH, 20, option.label());
                 field.setMaxLength(textOption.maxLength());
@@ -565,10 +572,42 @@ public class NoellesRolesConfigScreen extends Screen {
                 return;
             }
 
+            if (definition instanceof ConfigOptionDefinition.NumberInputOptionDefinition numberInputOption && control instanceof TextFieldWidget field) {
+                field.setText(String.valueOf(numberInputOption.getValue(workingCopy)));
+                valid = true;
+                return;
+            }
+
             if (definition instanceof ConfigOptionDefinition.TextOptionDefinition textOption && control instanceof TextFieldWidget field) {
                 field.setText(textOption.getValue(workingCopy));
                 valid = true;
             }
+        }
+
+        private void onNumberInputChanged(ConfigOptionDefinition.NumberInputOptionDefinition option, TextFieldWidget field, String value) {
+            String sanitized = value.replaceAll("[^0-9]", "");
+            if (!sanitized.equals(value)) {
+                field.setText(sanitized);
+                return;
+            }
+            if (sanitized.isEmpty()) {
+                valid = false;
+                updateDoneButtonState();
+                return;
+            }
+            try {
+                int parsed = Integer.parseInt(sanitized);
+                if (parsed <= 0) {
+                    valid = false;
+                    updateDoneButtonState();
+                    return;
+                }
+                option.setValue(workingCopy, parsed);
+                valid = true;
+            } catch (NumberFormatException ignored) {
+                valid = false;
+            }
+            updateDoneButtonState();
         }
 
         @SuppressWarnings("unchecked")

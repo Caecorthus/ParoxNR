@@ -39,6 +39,7 @@ public class AssassinScreen extends Screen {
     private static final double TARGET_SCROLL_STEP = 24.0;
 
     private final ClientPlayerEntity player;
+    private final boolean fromBook;
     private final List<AssassinRoleWidget> roleWidgets = new ArrayList<>();
     private UUID selectedTarget = null;
     private ButtonWidget backButton = null;
@@ -51,9 +52,10 @@ public class AssassinScreen extends Screen {
     private int roleViewportBottom;
     private int roleContentHeight;
     private double roleScrollOffset = 0.0;
-    public AssassinScreen(ClientPlayerEntity player) {
+    public AssassinScreen(ClientPlayerEntity player, boolean fromBook) {
         super(Text.translatable("screen.assassin.title"));
         this.player = player;
+        this.fromBook = fromBook;
     }
 
     @Override
@@ -65,8 +67,8 @@ public class AssassinScreen extends Screen {
 
         GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
 
-        // 基础检查
-        if (!gameWorld.isRole(player, Noellesroles.ASSASSIN) ||
+        // 基础检查；拾荒者只在书模式下可打开（服务端另行严格校验）
+        if ((!gameWorld.isRole(player, Noellesroles.ASSASSIN) && !gameWorld.isRole(player, Noellesroles.JUNKER)) ||
                 !GameFunctions.isPlayerPlayingAndAlive(player) || SwallowedPlayerComponent.isPlayerSwallowed(player)) {
             this.close();
             return;
@@ -149,6 +151,7 @@ public class AssassinScreen extends Screen {
                         roleListBaseY + row * (ROLE_BUTTON_HEIGHT + ROLE_GAP_Y),
                         allRoles.get(i),
                         selectedTarget,
+                        fromBook,
                         0, roleViewportTop, this.width, roleViewportBottom
                 );
                 roleWidgets.add(widget);

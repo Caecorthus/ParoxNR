@@ -100,6 +100,18 @@ public abstract class ConfigOptionDefinition<T> {
         return new TextOptionDefinition(id, label, description, maxLength, placeholder, defaultValueGetter, getter, setter);
     }
 
+    public static NumberInputOptionDefinition numberInput(
+            String id,
+            Text label,
+            Text description,
+            int maxDigits,
+            Function<ConfigScreenState, Integer> defaultValueGetter,
+            Function<ConfigScreenState, Integer> getter,
+            BiConsumer<ConfigScreenState, Integer> setter
+    ) {
+        return new NumberInputOptionDefinition(id, label, description, maxDigits, defaultValueGetter, getter, setter);
+    }
+
     public static <E> EnumOptionDefinition<E> enumeration(
             String id,
             Text label,
@@ -180,6 +192,41 @@ public abstract class ConfigOptionDefinition<T> {
         @Override
         public void setValue(ConfigScreenState state, Integer value) {
             setter.accept(state, Math.max(minValue, Math.min(maxValue, value)));
+        }
+    }
+
+    public static final class NumberInputOptionDefinition extends ConfigOptionDefinition<Integer> {
+        private final int maxDigits;
+        private final Function<ConfigScreenState, Integer> getter;
+        private final BiConsumer<ConfigScreenState, Integer> setter;
+
+        private NumberInputOptionDefinition(
+                String id,
+                Text label,
+                Text description,
+                int maxDigits,
+                Function<ConfigScreenState, Integer> defaultValueGetter,
+                Function<ConfigScreenState, Integer> getter,
+                BiConsumer<ConfigScreenState, Integer> setter
+        ) {
+            super(id, label, description, ConfigOptionType.NUMBER, defaultValueGetter);
+            this.maxDigits = maxDigits;
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        public int maxDigits() {
+            return maxDigits;
+        }
+
+        @Override
+        public Integer getValue(ConfigScreenState state) {
+            return getter.apply(state);
+        }
+
+        @Override
+        public void setValue(ConfigScreenState state, Integer value) {
+            setter.accept(state, value);
         }
     }
 

@@ -2,6 +2,7 @@ package org.agmas.noellesroles.mixin.bartender;
 
 import dev.doctor4t.wathe.block.FoodPlatterBlock;
 import dev.doctor4t.wathe.block_entity.BeveragePlateBlockEntity;
+import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.record.GameRecordManager;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -15,12 +16,14 @@ import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.agmas.noellesroles.ModItems;
+import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.item.BaseSpiritItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -31,8 +34,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 
 /**
- * 允许上等佳酿和基酒放置到餐盘 / 从餐盘优先拿取。
- * 拿取优先级：基酒 > 上等佳酿 > 其他（交给原版逻辑）
+ * 酒保的餐盘/饮品托盘交互：上等佳酿与基酒的放置、以及空手时的优先拿取。
+ * <p>
+ * 拿取优先级：基酒 &gt; 上等佳酿 &gt; 其他（交给原版逻辑）。
+ * <p>
+ * 注意类名是历史遗留：它<b>与已被移除的「防御药剂」无关</b>（防御药剂物品及其实体-消耗逻辑已从游戏中删除，
+ * 只因文件系统沙箱不允许删除文件才保留了这个名字）。改这个类时不要往"防御药剂"方向理解。
  */
 @Mixin(FoodPlatterBlock.class)
 public abstract class DefenseVialApplyMixin {
@@ -48,6 +55,15 @@ public abstract class DefenseVialApplyMixin {
 
             // === 放置：上等佳酿或基酒 ===
             if (handStack.isOf(ModItems.FINE_DRINK) || handStack.isOf(ModItems.BASE_SPIRIT)) {
+                // 只有酒保能把基酒（含调制酒）放上餐盘
+                if (handStack.isOf(ModItems.BASE_SPIRIT)
+                        && !GameWorldComponent.KEY.get(player.getWorld()).isRole(player, Noellesroles.BARTENDER)) {
+                    if (player instanceof ServerPlayerEntity serverPlayer) {
+                        serverPlayer.sendMessage(Text.translatable("tip.bartender.platter_denied"), true);
+                    }
+                    cir.setReturnValue(ActionResult.SUCCESS);
+                    return;
+                }
                 blockEntity.addItem(handStack.copy());
                 if (player instanceof ServerPlayerEntity serverPlayer) {
                     NbtCompound extra = new NbtCompound();

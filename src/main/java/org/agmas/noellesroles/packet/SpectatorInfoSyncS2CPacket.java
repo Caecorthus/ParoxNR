@@ -40,7 +40,8 @@ public record SpectatorInfoSyncS2CPacket(long requestId,
             buf.writeVarLong(entry.deathTick());
             buf.writeVarInt(entry.deathAgeSeconds());
             buf.writeVarLong(entry.latestRelevantReplayTick());
-            buf.writeString(entry.replaySummary(), 512);
+            buf.writeString(entry.replaySummary(), 4096);
+            buf.writeInt(entry.balance());
         }
         buf.writeVarInt(replayToasts.size());
         for (ReplayToast replayToast : replayToasts) {
@@ -65,8 +66,9 @@ public record SpectatorInfoSyncS2CPacket(long requestId,
             long deathTick = buf.readVarLong();
             int deathAgeSeconds = buf.readVarInt();
             long latestRelevantReplayTick = buf.readVarLong();
-            String replaySummary = buf.readString(512);
-            entries.add(new Entry(uuid, roleTranslationKey, roleColor, deathReasonRaw, deathTick, deathAgeSeconds, latestRelevantReplayTick, replaySummary));
+            String replaySummary = buf.readString(4096);
+            int balance = buf.readInt();
+            entries.add(new Entry(uuid, roleTranslationKey, roleColor, deathReasonRaw, deathTick, deathAgeSeconds, latestRelevantReplayTick, replaySummary, balance));
         }
         int toastCount = buf.readVarInt();
         List<ReplayToast> replayToasts = new ArrayList<>(toastCount);
@@ -80,6 +82,7 @@ public record SpectatorInfoSyncS2CPacket(long requestId,
         return new SpectatorInfoSyncS2CPacket(requestId, matchStartTick, latestReplayTick, entries, replayToasts);
     }
 
+    /** balance 为 -1 表示该玩家没有金币系统（或已离线），客户端不显示金币。 */
     public record Entry(UUID uuid,
                         String roleTranslationKey,
                         int roleColor,
@@ -87,7 +90,8 @@ public record SpectatorInfoSyncS2CPacket(long requestId,
                         long deathTick,
                         int deathAgeSeconds,
                         long latestRelevantReplayTick,
-                        String replaySummary) {
+                        String replaySummary,
+                        int balance) {
     }
 
     public record ReplayToast(long worldTick, String actorRoleKey, String targetRoleKey, String deathReasonRaw) {

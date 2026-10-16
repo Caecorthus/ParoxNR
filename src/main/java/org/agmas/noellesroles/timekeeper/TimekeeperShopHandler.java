@@ -13,12 +13,12 @@ import org.agmas.noellesroles.Noellesroles;
 
 /**
  * 计时员商店处理器
- * - 添加特殊物品：减少30秒游戏时间（100金币）
+ * - 添加特殊物品：减少1分钟游戏时间（100金币）
  */
 public class TimekeeperShopHandler {
 
-    // 45秒 = 45 * 20 = 900 ticks
-    private static final int TIME_REDUCTION_TICKS = 900;
+    // 60秒 = 60 * 20 = 1200 ticks
+    private static final int TIME_REDUCTION_TICKS = 1200;
     private static final int PRICE = 100;
 
     public static void register() {

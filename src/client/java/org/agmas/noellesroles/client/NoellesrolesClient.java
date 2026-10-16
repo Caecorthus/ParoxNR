@@ -6,12 +6,16 @@ import dev.doctor4t.wathe.api.WatheRoles;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.cca.PlayerMoodComponent;
 import dev.doctor4t.wathe.cca.PlayerPoisonComponent;
+import dev.doctor4t.wathe.cca.PlayerPsychoComponent;
 import dev.doctor4t.wathe.client.WatheClient;
+import dev.doctor4t.wathe.entity.FirecrackerEntity;
+import dev.doctor4t.wathe.entity.NoteEntity;
 import dev.doctor4t.wathe.entity.PlayerBodyEntity;
 import dev.doctor4t.wathe.game.GameConstants;
 import dev.doctor4t.wathe.game.GameFunctions;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -25,6 +29,8 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.item.ModelPredicateProviderRegistry;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.text.Text;
@@ -38,6 +44,7 @@ import net.minecraft.world.World;
 import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.ConfigWorldComponent;
 import org.agmas.noellesroles.ModItems;
+import org.agmas.noellesroles.ModParticles;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.assassin.AssassinPlayerComponent;
 import org.agmas.noellesroles.bartender.BartenderPlayerComponent;
@@ -53,6 +60,7 @@ import org.agmas.noellesroles.client.configscreen.NoellesRolesConfigScreenFactor
 import org.agmas.noellesroles.client.silencer.SilencedTalkBubbleCleaner;
 import org.agmas.noellesroles.client.sound.SoundPhysicsConfigLockManager;
 import org.agmas.noellesroles.client.sound.TalkBubblesConfigLockManager;
+import org.agmas.noellesroles.client.screen.RoleInfoLegacyScreen;
 import org.agmas.noellesroles.client.screen.RoleInfoScreen;
 import org.agmas.noellesroles.client.screen.RoleTargetMenuScreen;
 import org.agmas.noellesroles.client.screen.NoellesRolesConfigScreen;
@@ -60,9 +68,13 @@ import org.agmas.noellesroles.client.screen.SpectatorAssistPanelScreen;
 import org.agmas.noellesroles.util.HiddenEquipmentHelper;
 import dev.doctor4t.wathe.index.WatheItems;
 import org.agmas.noellesroles.client.screen.AssassinScreen;
+import org.agmas.noellesroles.client.screen.AttendantRegisterScreen;
 import org.agmas.noellesroles.client.screen.CommanderScreen;
 import org.agmas.noellesroles.client.screen.CriminalReasonerScreen;
+import org.agmas.noellesroles.client.screen.PhonismScreen;
+import org.agmas.noellesroles.client.screen.DualRoleSelectionScreen;
 import org.agmas.noellesroles.commander.CommanderPlayerComponent;
+import org.agmas.noellesroles.attendant.AttendantPlayerComponent;
 import org.agmas.noellesroles.corruptcop.CorruptCopPlayerComponent;
 import org.agmas.noellesroles.jester.JesterPlayerComponent;
 import org.agmas.noellesroles.looseend.LooseEndPlayerComponent;
@@ -71,8 +83,19 @@ import org.agmas.noellesroles.client.renderer.EngineerDoorHighlightRenderer;
 import org.agmas.noellesroles.client.renderer.FogOfWarRenderer;
 import org.agmas.noellesroles.client.renderer.HallucinationDummyRenderer;
 import org.agmas.noellesroles.client.renderer.HallucinationFakeBodyRenderer;
+import org.agmas.noellesroles.client.renderer.TaskPointHighlightRenderer;
+import org.agmas.noellesroles.client.taskpoint.TaskPointHighlightManager;
 import org.agmas.noellesroles.packet.AbilityC2SPacket;
+import org.agmas.noellesroles.packet.CriminalReasonerInvisibilityC2SPacket;
 import org.agmas.noellesroles.packet.DeathArenaToggleC2SPacket;
+import org.agmas.noellesroles.client.util.PlayerCompassHelper;
+import org.agmas.noellesroles.client.util.PlayerInputFreezeHelper;
+import org.agmas.noellesroles.client.util.TaotieIndicatorClientHelper;
+import org.agmas.noellesroles.packet.DualRoleOptionsS2CPacket;
+import org.agmas.noellesroles.packet.OpenVoodooPanelS2CPacket;
+import org.agmas.noellesroles.packet.OpenAssassinBookPanelS2CPacket;
+import org.agmas.noellesroles.packet.OpenAttendantRegisterS2CPacket;
+import org.agmas.noellesroles.packet.OpenForgedPotionSelectS2CPacket;
 import org.agmas.noellesroles.packet.EngineerDoorHighlightS2CPacket;
 import org.agmas.noellesroles.packet.FerrymanBodyAgeSyncS2CPacket;
 import org.agmas.noellesroles.packet.HallucinationDummyStateS2CPacket;
@@ -81,11 +104,15 @@ import org.agmas.noellesroles.packet.MorphCorpseToggleC2SPacket;
 import org.agmas.noellesroles.packet.SpectatorInfoRequestC2SPacket;
 import org.agmas.noellesroles.packet.VultureEatC2SPacket;
 import org.agmas.noellesroles.vulture.VulturePlayerComponent;
+import org.agmas.noellesroles.packet.JunkerSearchC2SPacket;
+import org.agmas.noellesroles.packet.EconomistReportS2CPacket;
+import org.agmas.noellesroles.client.economist.EconomistClientState;
 import org.agmas.noellesroles.packet.ReporterMarkC2SPacket;
 import org.agmas.noellesroles.packet.SpectatorReplayDetailSyncS2CPacket;
 import org.agmas.noellesroles.packet.SpectatorInfoSyncS2CPacket;
 import org.agmas.noellesroles.pathogen.InfectedPlayerComponent;
 import org.agmas.noellesroles.professor.IronManPlayerComponent;
+import org.agmas.noellesroles.toxicologist.AntidoteShieldPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.SpectatorStateHelper;
 import org.agmas.noellesroles.util.SwallowedInteractionHelper;
@@ -96,6 +123,7 @@ import org.agmas.noellesroles.silencer.SilencerPlayerComponent;
 import org.agmas.noellesroles.client.music.WorldMusicManager;
 import org.agmas.noellesroles.reporter.ReporterPlayerComponent;
 import org.agmas.noellesroles.bodyguard.BodyguardPlayerComponent;
+import org.agmas.noellesroles.criminalreasoner.CriminalReasonerPlayerComponent;
 import org.agmas.noellesroles.entity.HunterTrapEntity;
 import org.agmas.noellesroles.ferryman.FerrymanPlayerComponent;
 import org.agmas.noellesroles.hunter.HunterPlayerComponent;
@@ -103,8 +131,9 @@ import org.agmas.noellesroles.hallucination.HallucinationPlayerComponent;
 import org.agmas.noellesroles.hallucination.HallucinationHelper;
 import org.agmas.noellesroles.orthopedist.OrthopedistPlayerComponent;
 import org.agmas.noellesroles.riotpatrol.RiotPatrolPlayerComponent;
-import org.agmas.noellesroles.serialkiller.SerialKillerPlayerComponent;
 import org.agmas.noellesroles.bomber.BomberPlayerComponent;
+import org.agmas.noellesroles.dreameater.DreamEaterPlayerComponent;
+import org.agmas.noellesroles.client.particle.SleepingPillParticle;
 import org.agmas.noellesroles.NoellesRolesEntities;
 import org.agmas.noellesroles.util.BodyTargetHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
@@ -131,6 +160,7 @@ public class NoellesrolesClient implements ClientModInitializer {
     public static KeyBinding deathArenaToggleBind;
     public static KeyBinding roleInfoBind;
     public static KeyBinding configScreenBind;
+    public static KeyBinding taskPointHighlightBind;
     public static PlayerBodyEntity targetBody;
     public static PlayerEntity pathogenNearestTarget;
     public static double pathogenNearestTargetDistance;
@@ -150,10 +180,13 @@ public class NoellesrolesClient implements ClientModInitializer {
     private static boolean wasDeathArenaTogglePressed = false;
     private static boolean wasRoleInfoPressed = false;
     private static boolean wasConfigScreenPressed = false;
+    private static boolean wasTaskPointHighlightPressed = false;
     private static int swallowedLockedSelectedSlot = -1;
     private static boolean wasClientPlayerSwallowedLastTick = false;
     private static float swallowedLockedYaw = 0.0F;
     private static float swallowedLockedPitch = 0.0F;
+    private static int bodyguardLockedSelectedSlot = -1;
+    private static boolean wasClientBodyguardStancedLastTick = false;
 
 
     @Override
@@ -169,8 +202,12 @@ public class NoellesrolesClient implements ClientModInitializer {
         deathArenaToggleBind = KeyBindingHelper.registerKeyBinding(new KeyBinding("key." + Noellesroles.MOD_ID + ".death_arena_toggle", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.wathe.keybinds"));
         roleInfoBind = KeyBindingHelper.registerKeyBinding(new KeyBinding("key." + Noellesroles.MOD_ID + ".role_info", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_U, "category.wathe.keybinds"));
         configScreenBind = KeyBindingHelper.registerKeyBinding(new KeyBinding("key." + Noellesroles.MOD_ID + ".config_screen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_O, "category.wathe.keybinds"));
+        taskPointHighlightBind = KeyBindingHelper.registerKeyBinding(new KeyBinding("key." + Noellesroles.MOD_ID + ".task_point_highlight", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_B, "category.wathe.keybinds"));
         // 加载角色信息配置
         RoleInfoRegistry.load();
+
+        // 噬梦者：安眠药餐盘的蓝色毒粒子（wathe 骷髅粒子重染色）
+        ParticleFactoryRegistry.getInstance().register(ModParticles.SLEEPING_PILL_POISON, SleepingPillParticle.Factory::new);
 
         // 注册解毒剂冷却模型谓词
         ModelPredicateProviderRegistry.register(ModItems.ANTIDOTE, Identifier.of(Noellesroles.MOD_ID, "cooldown"),
@@ -190,6 +227,8 @@ public class NoellesrolesClient implements ClientModInitializer {
                     TalkBubblesConfigLockManager.deactivate();
                     SHUFFLED_PLAYER_ENTRIES_CACHE.clear();
                     ClientHallucinationState.reset();
+                    TaskPointHighlightManager.reset();
+                    EconomistClientState.reset();
                 })
         );
 
@@ -198,6 +237,15 @@ public class NoellesrolesClient implements ClientModInitializer {
         FogOfWarRenderer.register();
         HallucinationDummyRenderer.register();
         HallucinationFakeBodyRenderer.register();
+        // 注册任务点高亮（心情任务目标描边）
+        TaskPointHighlightManager.register();
+        TaskPointHighlightRenderer.register();
+
+        // 注册经济学家《经济财报》观测数据接收
+        ClientPlayNetworking.registerGlobalReceiver(EconomistReportS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () ->
+                        EconomistClientState.onReport(payload.balance(), payload.remainingTicks())
+                ));
 
         // 注册工程师门高亮 S2C 包接收
         ClientPlayNetworking.registerGlobalReceiver(EngineerDoorHighlightS2CPacket.ID,
@@ -245,6 +293,51 @@ public class NoellesrolesClient implements ClientModInitializer {
                         SpectatorAssistPanelScreen.applyReplayDetailSync(payload)
                 ));
 
+        // 注册双角色选择 S2C 包接收
+        ClientPlayNetworking.registerGlobalReceiver(DualRoleOptionsS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    MinecraftClient client = context.client();
+                    if (client.player != null) {
+                        client.setScreen(DualRoleSelectionScreen.create(payload));
+                    }
+                }));
+
+        // 注册巫毒娃娃 S2C 包接收：右键娃娃时由服务端通知打开绑定菜单
+        ClientPlayNetworking.registerGlobalReceiver(OpenVoodooPanelS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    MinecraftClient client = context.client();
+                    if (client.player != null) {
+                        client.setScreen(new RoleTargetMenuScreen(client.player, RoleTargetMenuScreen.MenuType.VOODOO));
+                    }
+                }));
+
+        // 注册刺客之书 S2C 包接收：右键书时由服务端通知打开猜测面板（书模式）
+        ClientPlayNetworking.registerGlobalReceiver(OpenAssassinBookPanelS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    MinecraftClient client = context.client();
+                    if (client.player != null) {
+                        client.setScreen(new AssassinScreen(client.player, true));
+                    }
+                }));
+
+        // 注册乘务登记表 S2C 包接收：右键登记表时由服务端通知打开登记面板
+        ClientPlayNetworking.registerGlobalReceiver(OpenAttendantRegisterS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    MinecraftClient client = context.client();
+                    if (client.player != null) {
+                        client.setScreen(AttendantRegisterScreen.create(client.player));
+                    }
+                }));
+
+        // 注册赝造药水 S2C 包接收：右键药水时由服务端通知打开选人界面
+        ClientPlayNetworking.registerGlobalReceiver(OpenForgedPotionSelectS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    MinecraftClient client = context.client();
+                    if (client.player != null) {
+                        client.setScreen(new RoleTargetMenuScreen(client.player, RoleTargetMenuScreen.MenuType.FORGED_POTION));
+                    }
+                }));
+
         // 注册实体渲染器
         EntityRendererRegistry.register(NoellesRolesEntities.POISON_GAS_BOMB_ENTITY, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(NoellesRolesEntities.POISON_GAS_CLOUD_ENTITY, EmptyEntityRenderer::new);
@@ -263,6 +356,7 @@ public class NoellesrolesClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> LooseEndsRadarHudRenderer.tick());
+        ClientTickEvents.END_CLIENT_TICK.register(client -> EconomistClientState.tick());
 
         // 注册 CanSeeBodyRole 监听器：高理智的验尸官查看尸体时可获得完整验尸信息
         CanSeeBodyRole.EVENT.register(viewer -> {
@@ -280,6 +374,50 @@ public class NoellesrolesClient implements ClientModInitializer {
 
             PlayerMoodComponent moodComponent = PlayerMoodComponent.KEY.get(player);
             return !moodComponent.isLowerThanMid();
+        });
+
+        // 注册 GetInstinctHighlight 监听器：拾荒者常亮透视自身8格内的掉落物
+        GetInstinctHighlight.EVENT.register(entity -> {
+            if (!(entity instanceof ItemEntity || entity instanceof NoteEntity || entity instanceof FirecrackerEntity)) {
+                return null;
+            }
+            ClientPlayerEntity localPlayer = MinecraftClient.getInstance().player;
+            if (localPlayer == null) return null;
+            if (!WatheClient.isPlayerPlayingAndAlive()) return null;
+            if (SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)) return null;
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(localPlayer.getWorld());
+            if (!gameWorldComponent.isRole(localPlayer, Noellesroles.JUNKER)) return null;
+            if (localPlayer.squaredDistanceTo(entity) > 8.0D * 8.0D) return null;
+            return GetInstinctHighlight.HighlightResult.always(Noellesroles.JUNKER.color());
+        });
+
+        // 注册 GetInstinctHighlight 监听器：隐身中的犯罪推理学家无法被任何透视高亮。
+        // 必须用最高优先级 skip：Wathe 默认杀手本能不检查隐身，黑帮巨星特别透视优先级为 101，均需压过。
+        GetInstinctHighlight.EVENT.register(entity -> {
+            if (!(entity instanceof PlayerEntity player) || !player.isInvisible()) return null;
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(player.getWorld());
+            if (gameWorldComponent.isRole(player, Noellesroles.CRIMINAL_REASONER)) {
+                return new GetInstinctHighlight.HighlightResult(-1, false, Integer.MAX_VALUE);
+            }
+            return null;
+        });
+
+        // 注册 GetInstinctHighlight 监听器：乘务员登记后的玩家/尸体短暂绿色高亮（仅乘务员可见）
+        GetInstinctHighlight.EVENT.register(entity -> {
+            if (!(entity instanceof PlayerEntity) && !(entity instanceof PlayerBodyEntity)) return null;
+            ClientPlayerEntity localPlayer = MinecraftClient.getInstance().player;
+            if (localPlayer == null) return null;
+            if (!WatheClient.isPlayerPlayingAndAlive()) return null;
+            if (SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)) return null;
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(localPlayer.getWorld());
+            if (!gameWorldComponent.isRole(localPlayer, Noellesroles.ATTENDANT)) return null;
+            AttendantPlayerComponent attendantComponent = AttendantPlayerComponent.KEY.get(localPlayer);
+            if (attendantComponent.getHighlightTicks() <= 0
+                    || attendantComponent.getHighlightEntityId() != entity.getId()) {
+                return null;
+            }
+            return GetInstinctHighlight.HighlightResult.always(Color.GREEN.getRGB(),
+                    GetInstinctHighlight.HighlightResult.PRIORITY_HIGH);
         });
 
         // 注册 GetInstinctHighlight 监听器：各角色的本能高亮逻辑
@@ -334,11 +472,33 @@ public class NoellesrolesClient implements ClientModInitializer {
                 }
             }
 
+            // WHITE_KNIGHT: 常亮透视处于疯魔状态的玩家（无需按键）
+            if (gameWorldComponent.isRole(localPlayer, Noellesroles.WHITE_KNIGHT)) {
+                PlayerPsychoComponent psychoComponent = PlayerPsychoComponent.KEY.get(player);
+                if (psychoComponent.getPsychoTicks() > 0) {
+                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.WHITE_KNIGHT.color());
+                }
+            }
+
+            // 睡眠任务透视是「常亮」的附加信息：一旦玩家按住自己的杀手本能键，就整体让位给原版杀手本能
+            // （本监听器返回 null 时，wathe WatheClient.getInstinctHighlight 会回落到默认的本能高亮），
+            // 避免按本能键时睡觉任务玩家仍是蓝色、与「全屏统一红色高亮」的本能观感冲突。
+            // 乘务员登记高亮属于操作反馈、黑帮巨星与犯罪推理学家的优先级另有专门约定，均不受此影响。
+            boolean sleepVisionSuppressed = WatheClient.isInstinctEnabled();
+
             // BOMBER: 本能透视 - 无需按键即可看到携带定时炸弹的玩家
             if (gameWorldComponent.isRole(localPlayer, Noellesroles.BOMBER)) {
                 BomberPlayerComponent comp = BomberPlayerComponent.KEY.get(player);
                 if (comp.hasBomb()) {
                     return GetInstinctHighlight.HighlightResult.always(Noellesroles.BOMBER.color());
+                }
+            }
+
+            // DREAM_EATER: 梦境窥视 - 无需按键即可看到持有任一睡觉任务（原版睡觉 / 噬梦者睡觉）的玩家
+            if (!sleepVisionSuppressed && gameWorldComponent.isRole(localPlayer, Noellesroles.DREAM_EATER)) {
+                DreamEaterPlayerComponent dreamEaterComp = DreamEaterPlayerComponent.KEY.get(player);
+                if (dreamEaterComp.hasSleepTask()) {
+                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.DREAM_EATER.color());
                 }
             }
 
@@ -376,9 +536,13 @@ public class NoellesrolesClient implements ClientModInitializer {
                 }
             }
 
-            // TOXICOLOGIST: 看到中毒者发红光（需要视线）
+            // TOXICOLOGIST: 带盾玩家发亮绿色描边 / 中毒者发红光（均需要视线）
             if (gameWorldComponent.isRole(localPlayer, Noellesroles.TOXICOLOGIST)) {
                 if (localPlayer.canSee(player)) {
+                    AntidoteShieldPlayerComponent shieldComp = AntidoteShieldPlayerComponent.KEY.get(player);
+                    if (shieldComp.hasShield()) {
+                        return GetInstinctHighlight.HighlightResult.always(new Color(85, 255, 85).getRGB());
+                    }
                     PlayerPoisonComponent comp = PlayerPoisonComponent.KEY.get(player);
                     if (comp.poisonTicks > 0) return  GetInstinctHighlight.HighlightResult.always(Noellesroles.TOXICOLOGIST.color());
                 }
@@ -417,26 +581,6 @@ public class NoellesrolesClient implements ClientModInitializer {
             // 如果目标是生存大师，阻止被杀手本能高亮
             if (gameWorldComponent.isRole(player, Noellesroles.SURVIVAL_MASTER) && !localPlayer.canSee(player)) {
                 return GetInstinctHighlight.HighlightResult.skip();
-            }
-
-            // BODYGUARD: 保护目标始终高亮显示（透视效果）
-            if (gameWorldComponent.isRole(localPlayer, Noellesroles.BODYGUARD)) {
-                BodyguardPlayerComponent bodyguardComp = BodyguardPlayerComponent.KEY.get(localPlayer);
-                if (bodyguardComp.isCurrentTarget(player.getUuid())) {
-                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.BODYGUARD.color());
-                }
-            }
-
-            // SERIAL_KILLER: 当前目标始终高亮显示（透视效果）
-            if (gameWorldComponent.isRole(localPlayer, Noellesroles.SERIAL_KILLER)) {
-                SerialKillerPlayerComponent serialKillerComp = SerialKillerPlayerComponent.KEY.get(localPlayer);
-                if (serialKillerComp.isCurrentTarget(player.getUuid())) {
-                    if (!WatheClient.isInstinctEnabled() && isCommanderMarkedTarget(gameWorldComponent, localPlayer, player)) {
-                        return null;
-                    }
-                    // 当前目标 - 使用连环杀手颜色透视
-                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.SERIAL_KILLER.color());
-                }
             }
 
             if (gameWorldComponent.canUseKillerFeatures(localPlayer)) {
@@ -488,7 +632,6 @@ public class NoellesrolesClient implements ClientModInitializer {
             VulturePlayerComponent vultureComp = VulturePlayerComponent.KEY.get(localPlayer);
             if (!vultureComp.hasActiveHighlight()) return null;
             if (!GameFunctions.isPlayerPlayingAndAlive(player)) return null;
-            if (!vultureComp.isEntityWithinHighlightRange(player)) return null;
             return GetInstinctHighlight.HighlightResult.always(Noellesroles.VULTURE.color());
         });
 
@@ -675,18 +818,6 @@ public class NoellesrolesClient implements ClientModInitializer {
             if (gameWorldComponent.isRole(player, Noellesroles.SURVIVAL_MASTER)) {
                 return GetInstinctHighlight.HighlightResult.skip();
             }
-            if (gameWorldComponent.isRole(localPlayer, Noellesroles.BODYGUARD)) {
-                BodyguardPlayerComponent bodyguardComp = BodyguardPlayerComponent.KEY.get(localPlayer);
-                if (bodyguardComp.isCurrentTarget(player.getUuid())) {
-                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.BODYGUARD.color());
-                }
-            }
-            if (gameWorldComponent.isRole(localPlayer, Noellesroles.SERIAL_KILLER)) {
-                SerialKillerPlayerComponent serialKillerComp = SerialKillerPlayerComponent.KEY.get(localPlayer);
-                if (serialKillerComp.isCurrentTarget(player.getUuid())) {
-                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.SERIAL_KILLER.color());
-                }
-            }
             if (gameWorldComponent.canUseKillerFeatures(localPlayer)
                     && gameWorldComponent.isRole(player, Noellesroles.COMMANDER)
                     && player != localPlayer) {
@@ -752,8 +883,6 @@ public class NoellesrolesClient implements ClientModInitializer {
                     && !gameWorldComponent.isRole(localPlayer, Noellesroles.ORTHOPEDIST)
                     && !gameWorldComponent.isRole(localPlayer, Noellesroles.PATHOGEN)
                     && !gameWorldComponent.isRole(localPlayer, Noellesroles.REPORTER)
-                    && !gameWorldComponent.isRole(localPlayer, Noellesroles.BODYGUARD)
-                    && !gameWorldComponent.isRole(localPlayer, Noellesroles.SERIAL_KILLER)
                     && !gameWorldComponent.isRole(localPlayer, Noellesroles.JESTER)) {
                 return null;
             }
@@ -823,18 +952,6 @@ public class NoellesrolesClient implements ClientModInitializer {
             if (gameWorldComponent.isRole(referencePlayer, Noellesroles.SURVIVAL_MASTER)) {
                 return GetInstinctHighlight.HighlightResult.skip();
             }
-            if (gameWorldComponent.isRole(localPlayer, Noellesroles.BODYGUARD)) {
-                BodyguardPlayerComponent bodyguardComp = BodyguardPlayerComponent.KEY.get(localPlayer);
-                if (bodyguardComp.isCurrentTarget(referencePlayer.getUuid())) {
-                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.BODYGUARD.color());
-                }
-            }
-            if (gameWorldComponent.isRole(localPlayer, Noellesroles.SERIAL_KILLER)) {
-                SerialKillerPlayerComponent serialKillerComp = SerialKillerPlayerComponent.KEY.get(localPlayer);
-                if (serialKillerComp.isCurrentTarget(referencePlayer.getUuid())) {
-                    return GetInstinctHighlight.HighlightResult.always(Noellesroles.SERIAL_KILLER.color());
-                }
-            }
             if (gameWorldComponent.canUseKillerFeatures(localPlayer)
                     && gameWorldComponent.isRole(referencePlayer, Noellesroles.COMMANDER)
                     && referencePlayer != localPlayer) {
@@ -851,24 +968,12 @@ public class NoellesrolesClient implements ClientModInitializer {
 
             RiotPatrolPlayerComponent riotPatrolComponent = RiotPatrolPlayerComponent.KEY.get(player);
             if (riotPatrolComponent.isRooted()) {
-                client.options.forwardKey.setPressed(false);
-                client.options.backKey.setPressed(false);
-                client.options.leftKey.setPressed(false);
-                client.options.rightKey.setPressed(false);
-                client.options.jumpKey.setPressed(false);
-                client.options.sprintKey.setPressed(false);
-                client.options.sneakKey.setPressed(false);
+                PlayerInputFreezeHelper.releaseMovementKeys(client);
             }
 
             HunterPlayerComponent hunterComponent = HunterPlayerComponent.KEY.get(player);
             if (hunterComponent.isTrapped()) {
-                client.options.forwardKey.setPressed(false);
-                client.options.backKey.setPressed(false);
-                client.options.leftKey.setPressed(false);
-                client.options.rightKey.setPressed(false);
-                client.options.jumpKey.setPressed(false);
-                client.options.sprintKey.setPressed(false);
-                client.options.sneakKey.setPressed(false);
+                PlayerInputFreezeHelper.releaseMovementKeys(client);
             }
 
             if (hunterComponent.getFractureLayers() > 0) {
@@ -925,76 +1030,23 @@ public class NoellesrolesClient implements ClientModInitializer {
                     return true;
                 });
                 if (gameWorldComponent.isRole(MinecraftClient.getInstance().player, Noellesroles.PATHOGEN)) {
-                    pathogenNearestTarget = null;
-                    pathogenNearestTargetDistance = Double.MAX_VALUE;
-                    pathogenTargetDirection = "";
-                    pathogenTargetVertical = "";
-                    PlayerEntity localPlayer = MinecraftClient.getInstance().player;
+                    ClientPlayerEntity localPlayer = MinecraftClient.getInstance().player;
 
                     // 找到最近的未感染玩家（不限距离，用于指南针指向）
-                    for (PlayerEntity player : localPlayer.getWorld().getPlayers()) {
-                        if (player.equals(localPlayer)) continue;
-                        if (SpectatorStateHelper.isSpectatorLike(player) || player.isCreative()) continue;
-                        // 检查玩家是否有角色（在游戏中）
-                        if (!gameWorldComponent.hasAnyRole(player)) continue;
+                    pathogenNearestTarget = PlayerCompassHelper.findNearest(localPlayer, player ->
+                            !SpectatorStateHelper.isSpectatorLike(player)
+                                    && !player.isCreative()
+                                    && gameWorldComponent.hasAnyRole(player)
+                                    && !InfectedPlayerComponent.KEY.get(player).isInfected());
 
-                        InfectedPlayerComponent infected = InfectedPlayerComponent.KEY.get(player);
-                        if (infected.isInfected()) continue;
-
-                        double distance = localPlayer.squaredDistanceTo(player);
-                        if (distance < pathogenNearestTargetDistance) {
-                            pathogenNearestTargetDistance = distance;
-                            pathogenNearestTarget = player;
-                        }
-                    }
-
-                    // 计算方向
                     if (pathogenNearestTarget != null) {
-                        pathogenNearestTargetDistance = Math.sqrt(pathogenNearestTargetDistance);
-
-                        // 计算从玩家指向目标的方向
-                        double dx = pathogenNearestTarget.getX() - localPlayer.getX();
-                        double dy = pathogenNearestTarget.getY() - localPlayer.getY();
-                        double dz = pathogenNearestTarget.getZ() - localPlayer.getZ();
-
-                        // 计算目标相对于玩家视角的角度
-                        double targetAngle = Math.toDegrees(Math.atan2(-dx, dz));
-                        double playerYaw = localPlayer.getYaw() % 360;
-                        if (playerYaw < 0) playerYaw += 360;
-                        if (targetAngle < 0) targetAngle += 360;
-
-                        // 计算相对角度（目标相对于玩家面朝方向）
-                        double relativeAngle = targetAngle - playerYaw;
-                        if (relativeAngle < -180) relativeAngle += 360;
-                        if (relativeAngle > 180) relativeAngle -= 360;
-
-                        // 根据相对角度确定方向箭头
-                        if (relativeAngle >= -22.5 && relativeAngle < 22.5) {
-                            pathogenTargetDirection = "↑"; // 前方
-                        } else if (relativeAngle >= 22.5 && relativeAngle < 67.5) {
-                            pathogenTargetDirection = "↗"; // 右前方
-                        } else if (relativeAngle >= 67.5 && relativeAngle < 112.5) {
-                            pathogenTargetDirection = "→"; // 右方
-                        } else if (relativeAngle >= 112.5 && relativeAngle < 157.5) {
-                            pathogenTargetDirection = "↘"; // 右后方
-                        } else if (relativeAngle >= 157.5 || relativeAngle < -157.5) {
-                            pathogenTargetDirection = "↓"; // 后方
-                        } else if (relativeAngle >= -157.5 && relativeAngle < -112.5) {
-                            pathogenTargetDirection = "↙"; // 左后方
-                        } else if (relativeAngle >= -112.5 && relativeAngle < -67.5) {
-                            pathogenTargetDirection = "←"; // 左方
-                        } else {
-                            pathogenTargetDirection = "↖"; // 左前方
-                        }
-
-                        // 计算垂直位置提示（高度差超过2格才提示）
-                        if (dy > 2) {
-                            pathogenTargetVertical = "↑"; // 上方
-                        } else if (dy < -2) {
-                            pathogenTargetVertical = "↓"; // 下方
-                        } else {
-                            pathogenTargetVertical = ""; // 同一高度
-                        }
+                        pathogenNearestTargetDistance = Math.sqrt(localPlayer.squaredDistanceTo(pathogenNearestTarget));
+                        pathogenTargetDirection = PlayerCompassHelper.directionArrow(localPlayer, pathogenNearestTarget);
+                        pathogenTargetVertical = PlayerCompassHelper.verticalArrow(localPlayer, pathogenNearestTarget);
+                    } else {
+                        pathogenNearestTargetDistance = Double.MAX_VALUE;
+                        pathogenTargetDirection = "";
+                        pathogenTargetVertical = "";
                     }
                 } else {
                     pathogenNearestTarget = null;
@@ -1030,6 +1082,9 @@ public class NoellesrolesClient implements ClientModInitializer {
                         crosshairTargetDistance = eyePos.distanceTo(blockHitResult.getPos());
                     }
                 }
+
+                // 更新饕餮玩家指示器
+                TaotieIndicatorClientHelper.tick(bodyPlayer);
             }
 
             ClientPlayerEntity spectatorCandidate = MinecraftClient.getInstance().player;
@@ -1075,7 +1130,7 @@ public class NoellesrolesClient implements ClientModInitializer {
                             AssassinPlayerComponent assassinComp = AssassinPlayerComponent.KEY.get(localPlayer);
                             // 检查是否可以使用技能（不在冷却中且有剩余次数）
                             if (assassinComp.canGuess()) {
-                                client.setScreen(new AssassinScreen(localPlayer));
+                                client.setScreen(new AssassinScreen(localPlayer, false));
                             }
                             // 如果不能使用，不打开界面，HUD 会显示相应的提示信息
                         }
@@ -1095,11 +1150,12 @@ public class NoellesrolesClient implements ClientModInitializer {
                         return;
                     }
 
-                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.VOODOO)) {
+                    // 谎言音效师按G打开选人+选音效界面
+                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.PHONISM)) {
                         if (GameFunctions.isPlayerPlayingAndAlive(localPlayer)
                                 && !SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)
                                 && AbilityPlayerComponent.KEY.get(localPlayer).getCooldown() <= 0) {
-                            client.setScreen(new RoleTargetMenuScreen(localPlayer, RoleTargetMenuScreen.MenuType.VOODOO));
+                            client.setScreen(new PhonismScreen(localPlayer));
                         }
                         return;
                     }
@@ -1180,6 +1236,34 @@ public class NoellesrolesClient implements ClientModInitializer {
                         return;
                     }
 
+                    // 连环杀手角色按G：释放疯魔模式
+                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.SERIAL_KILLER)) {
+                        if (!GameFunctions.isPlayerPlayingAndAlive(localPlayer)
+                                || SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)) {
+                            return;
+                        }
+                        if (AbilityPlayerComponent.KEY.get(localPlayer).getCooldown() > 0) {
+                            return;
+                        }
+                        ClientPlayNetworking.send(new AbilityC2SPacket());
+                        return;
+                    }
+
+                    // 拾荒者角色按G：对准3格内的尸体开始搜刮
+                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.JUNKER)) {
+                        if (!GameFunctions.isPlayerPlayingAndAlive(localPlayer)
+                                || SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)) {
+                            return;
+                        }
+                        if (AbilityPlayerComponent.KEY.get(localPlayer).getCooldown() > 0) {
+                            return;
+                        }
+                        if (targetBody != null) {
+                            ClientPlayNetworking.send(new JunkerSearchC2SPacket(targetBody.getUuid()));
+                        }
+                        return;
+                    }
+
                     ClientPlayNetworking.send(new AbilityC2SPacket());
                 });
             }
@@ -1189,12 +1273,31 @@ public class NoellesrolesClient implements ClientModInitializer {
                     if (localPlayer == null) return;
                     GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(localPlayer.getWorld());
 
+                    // 犯罪推理学家按技能键2：消耗一次充能隐身20秒（隐身期间不可重复激活）
+                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.CRIMINAL_REASONER)) {
+                        if (GameFunctions.isPlayerPlayingAndAlive(localPlayer)
+                                && !SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)
+                                && !localPlayer.hasStatusEffect(StatusEffects.INVISIBILITY)
+                                && CriminalReasonerPlayerComponent.KEY.get(localPlayer).getInvisibilityCharges() > 0) {
+                            ClientPlayNetworking.send(new CriminalReasonerInvisibilityC2SPacket());
+                        }
+                        return;
+                    }
+
                     if (gameWorldComponent.isRole(localPlayer, Noellesroles.MORPHLING)) {
                         if (GameFunctions.isPlayerPlayingAndAlive(localPlayer)
                                 && !SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)
                                 && MorphlingPlayerComponent.KEY.get(localPlayer).getMorphTicks() == 0) {
                             client.setScreen(new RoleTargetMenuScreen(localPlayer, RoleTargetMenuScreen.MenuType.MORPHLING));
                         }
+                        return;
+                    }
+
+                    // 饕餮角色按Y开关玩家指示器
+                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.TAOTIE)
+                            && TaotieIndicatorClientHelper.isUnlocked(TaotiePlayerComponent.KEY.get(localPlayer))) {
+                        TaotieIndicatorClientHelper.toggle();
+                        return;
                     }
                 });
             }
@@ -1206,11 +1309,12 @@ public class NoellesrolesClient implements ClientModInitializer {
                 }
                 GameWorldComponent gwc = GameWorldComponent.KEY.get(MinecraftClient.getInstance().player.getWorld());
 
-                if (MinecraftClient.getInstance().currentScreen instanceof RoleInfoScreen) {
+                if (MinecraftClient.getInstance().currentScreen instanceof RoleInfoScreen
+                        || MinecraftClient.getInstance().currentScreen instanceof RoleInfoLegacyScreen) {
                     MinecraftClient.getInstance().setScreen(null);
                 } else if (MinecraftClient.getInstance().currentScreen == null) {
                     if (!gwc.isRunning()) {
-                        MinecraftClient.getInstance().setScreen(new RoleInfoScreen());
+                        MinecraftClient.getInstance().setScreen(RoleInfoScreen.create());
                         return;
                     }
                     boolean isAlive = GameFunctions.isPlayerPlayingAndAlive(MinecraftClient.getInstance().player);
@@ -1221,7 +1325,7 @@ public class NoellesrolesClient implements ClientModInitializer {
                     boolean canOpenRoleInfo = (hasRole && (isAlive || isSwallowed)) || isDeadSpectator;
 
                     if (canOpenRoleInfo) {
-                        MinecraftClient.getInstance().setScreen(new RoleInfoScreen());
+                        MinecraftClient.getInstance().setScreen(RoleInfoScreen.create());
                     }
                 }
             }
@@ -1265,6 +1369,13 @@ public class NoellesrolesClient implements ClientModInitializer {
                 }
             }
             wasConfigScreenPressed = isConfigScreenPressed;
+
+            boolean isTaskPointHighlightPressed = taskPointHighlightBind != null && taskPointHighlightBind.isPressed();
+            if (isTaskPointHighlightPressed && !wasTaskPointHighlightPressed
+                    && MinecraftClient.getInstance().currentScreen == null) {
+                TaskPointHighlightManager.onKeyPressed(MinecraftClient.getInstance());
+            }
+            wasTaskPointHighlightPressed = isTaskPointHighlightPressed;
 
             ClientPlayerEntity player = MinecraftClient.getInstance().player;
             if (player != null) {
@@ -1320,19 +1431,31 @@ public class NoellesrolesClient implements ClientModInitializer {
                     player.setOnGround(true);
                     player.fallDistance = 0.0F;
                     client.gameRenderer.setRenderHand(false);
+                } else if (BodyguardPlayerComponent.KEY.get(player).isStanceActive()
+                        && GameFunctions.isPlayerPlayingAndAlive(player)) {
+                    // 保镖潜行姿态:锁定热栏切换(进入时记录槽位,数字键/滚轮均无效)
+                    if (!wasClientBodyguardStancedLastTick) {
+                        bodyguardLockedSelectedSlot = player.getInventory().selectedSlot;
+                    }
+                    if (bodyguardLockedSelectedSlot >= 0 && client.currentScreen == null) {
+                        player.getInventory().selectedSlot = bodyguardLockedSelectedSlot;
+                    }
+                    if (client.options.hotbarKeys != null) {
+                        for (var keyBinding : client.options.hotbarKeys) {
+                            while (keyBinding.wasPressed()) {
+                            }
+                        }
+                    }
                 } else {
                     swallowedLockedSelectedSlot = -1;
-                    if (wasClientPlayerSwallowedLastTick) {
-                        player.noClip = false;
-                        player.setInvisible(false);
-                        client.gameRenderer.setRenderHand(true);
-                    } else {
-                        player.noClip = false;
-                        player.setInvisible(false);
-                        client.gameRenderer.setRenderHand(true);
-                    }
+                    bodyguardLockedSelectedSlot = -1;
+                    player.noClip = false;
+                    // 还原为服务端同步的隐形状态：无条件 false 会覆盖隐身效果，导致仅自己视角可见
+                    player.setInvisible(player.hasStatusEffect(StatusEffects.INVISIBILITY));
+                    client.gameRenderer.setRenderHand(true);
                 }
                 wasClientPlayerSwallowedLastTick = swallowed;
+                wasClientBodyguardStancedLastTick = BodyguardPlayerComponent.KEY.get(player).isStanceActive();
 
                 JesterTimeRenderer.tick();
 

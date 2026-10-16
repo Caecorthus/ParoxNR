@@ -2,12 +2,14 @@ package org.agmas.noellesroles.mixin.corruptcop;
 
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.index.WatheItems;
+import dev.doctor4t.wathe.index.WatheSounds;
 import dev.doctor4t.wathe.util.GunShootPayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.corruptcop.CorruptCopPlayerComponent;
 import org.agmas.noellesroles.gangsterstar.GangsterStarPlayerComponent;
@@ -44,6 +46,12 @@ public abstract class CorruptCopGunCooldownMixin {
         if (isGangsterStarRevolverShot
                 && !GangsterStarPlayerComponent.KEY.get(player).hasRevolverShot()) {
             player.sendMessage(net.minecraft.text.Text.translatable("tip.noellesroles.gangster_star.no_shots"), true);
+            // 空仓音效与德林加一致（服务端广播，周围玩家也能听见）；冷却中保持静默
+            if (!player.getItemCooldownManager().isCoolingDown(WatheItems.REVOLVER)) {
+                player.getWorld().playSound(null, player.getX(), player.getEyeY(), player.getZ(),
+                        WatheSounds.ITEM_REVOLVER_CLICK, SoundCategory.PLAYERS,
+                        0.5f, 1f + player.getRandom().nextFloat() * .1f - .05f);
+            }
             ci.cancel();
             return;
         }

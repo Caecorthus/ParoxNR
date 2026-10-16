@@ -33,6 +33,8 @@ public abstract class NeutralMoodMixin {
     @Unique
     private static final Identifier MOOD_CRIMINAL_REASONER = Identifier.of(Noellesroles.MOD_ID, "hud/mood_criminal_reasoner");
     @Unique
+    private static final Identifier MOOD_GANGSTER_STAR = Identifier.of(Noellesroles.MOD_ID, "hud/mood_gangster_star");
+    @Unique
     private static final Identifier MOOD_CORRUPT_COP = Identifier.of(Noellesroles.MOD_ID, "hud/mood_corruptedcop");
     @Unique
     private static final Identifier MOOD_CORRUPT_COP_MOMENT = Identifier.of(Noellesroles.MOD_ID, "hud/mood_corrupted_moment");
@@ -50,6 +52,7 @@ public abstract class NeutralMoodMixin {
         if (gwc.isRole(player, Noellesroles.VULTURE)) return MOOD_VULTURE;
         if (gwc.isRole(player, Noellesroles.TAOTIE)) return MOOD_TAOTIE;
         if (gwc.isRole(player, Noellesroles.CRIMINAL_REASONER)) return MOOD_CRIMINAL_REASONER;
+        if (gwc.isRole(player, Noellesroles.GANGSTER_STAR)) return MOOD_GANGSTER_STAR;
         if (gwc.isRole(player, Noellesroles.FERRYMAN)) return MOOD_FERRYMAN;
         if (gwc.isRole(player, Noellesroles.CORRUPT_COP)) {
             CorruptCopPlayerComponent comp = CorruptCopPlayerComponent.KEY.get(player);

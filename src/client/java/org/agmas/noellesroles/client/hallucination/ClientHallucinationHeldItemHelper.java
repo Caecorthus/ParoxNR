@@ -63,7 +63,7 @@ public final class ClientHallucinationHeldItemHelper {
             PlayerEntity target = client.world.getPlayerByUuid(shuffledUuid);
             if (target != null) {
                 ItemStack replacement = getDisplayedHandStack(target, renderMode);
-                if (!replacement.isEmpty() && !HiddenEquipmentHelper.shouldHideItem(replacement, target)) {
+                if (!replacement.isEmpty() && !HiddenEquipmentHelper.shouldHideItem(replacement, target, client.player)) {
                     return replacement.copy();
                 }
             }
@@ -75,7 +75,7 @@ public final class ClientHallucinationHeldItemHelper {
         }
 
         ItemStack replacement = getDisplayedHandStack(fallbackTarget, renderMode);
-        if (replacement.isEmpty() || HiddenEquipmentHelper.shouldHideItem(replacement, fallbackTarget)) {
+        if (replacement.isEmpty() || HiddenEquipmentHelper.shouldHideItem(replacement, fallbackTarget, client.player)) {
             return original;
         }
         return replacement.copy();
@@ -139,7 +139,7 @@ public final class ClientHallucinationHeldItemHelper {
         for (int offset = 0; offset < players.size(); offset++) {
             PlayerEntity candidate = players.get((startIndex + offset) % players.size());
             ItemStack displayed = getDisplayedHandStack(candidate, renderMode);
-            if (!displayed.isEmpty() && !HiddenEquipmentHelper.shouldHideItem(displayed, candidate)) {
+            if (!displayed.isEmpty() && !HiddenEquipmentHelper.shouldHideItem(displayed, candidate, client.player)) {
                 return candidate;
             }
         }

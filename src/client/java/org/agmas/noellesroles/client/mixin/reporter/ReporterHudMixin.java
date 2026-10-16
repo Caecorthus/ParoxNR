@@ -13,6 +13,7 @@ import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.gui.HallucinationHudRenderer;
+import org.agmas.noellesroles.client.util.HudRenderHelper;
 import org.agmas.noellesroles.client.util.InsanityNameHelper;
 import org.agmas.noellesroles.reporter.ReporterPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,7 +46,7 @@ public abstract class ReporterHudMixin {
                 if (markedTarget != null) {
                     Text line2 = Text.translatable("tip.reporter.marked", InsanityNameHelper.getVisiblePlayerName(markedTarget));
                     drawY -= getTextRenderer().getWrappedLinesHeight(line2, 999999);
-                    context.drawTextWithShadow(getTextRenderer(), line2, context.getScaledWindowWidth() - getTextRenderer().getWidth(line2), drawY, Noellesroles.REPORTER.color());
+                    HudRenderHelper.drawRightAligned(context, getTextRenderer(), line2, 0, drawY, Noellesroles.REPORTER.color());
                 }
             }
 
@@ -65,7 +66,7 @@ public abstract class ReporterHudMixin {
             }
 
             drawY -= getTextRenderer().getWrappedLinesHeight(line1, 999999);
-            context.drawTextWithShadow(getTextRenderer(), line1, context.getScaledWindowWidth() - getTextRenderer().getWidth(line1), drawY, Noellesroles.REPORTER.color());
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), line1, 0, drawY, Noellesroles.REPORTER.color());
         }
     }
 }

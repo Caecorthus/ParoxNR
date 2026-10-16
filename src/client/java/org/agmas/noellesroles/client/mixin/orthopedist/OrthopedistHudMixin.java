@@ -13,6 +13,7 @@ import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.gui.HallucinationHudRenderer;
+import org.agmas.noellesroles.client.util.HudRenderHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -61,6 +62,6 @@ public abstract class OrthopedistHudMixin {
         }
 
         drawY -= getTextRenderer().getWrappedLinesHeight(line, 999999);
-        context.drawTextWithShadow(getTextRenderer(), line, context.getScaledWindowWidth() - getTextRenderer().getWidth(line), drawY, Noellesroles.ORTHOPEDIST.color());
+        HudRenderHelper.drawRightAligned(context, getTextRenderer(), line, 0, drawY, Noellesroles.ORTHOPEDIST.color());
     }
 }

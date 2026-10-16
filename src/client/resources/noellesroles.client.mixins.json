@@ -5,7 +5,17 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "assassin.AssassinHudMixin",
+    "attendant.AttendantBodyInteractionMixin",
+    "bandit.BanditHudMixin",
+    "baosang.BaosangHudMixin",
+    "bodyguard.BodyguardHotbarScrollMixin",
+    "bodyguard.BodyguardHudMixin",
+    "bodyguard.BodyguardLookInputMixin",
+    "bodyguard.BodyguardSneakInputMixin",
     "breacher.BreacherHudMixin",
+    "dreameater.ClientMoodTaskDummyMixin",
+    "dreameater.DreamEaterHudMixin",
+    "dreameater.DreamTaskMoodBarColorMixin",
     "commander.CommanderHudMixin",
     "commander.CommanderRoleNameRendererMixin",
     "coroner.CoronerHudMixin",
@@ -16,6 +26,9 @@
     "ferryman.FerrymanHudMixin",
     "gangsterstar.GangsterStarHudMixin",
     "jester.JesterHudMixin",
+    "economist.EconomistMoneyHudMixin",
+    "junker.JunkerBodyPromptMixin",
+    "junker.JunkerHudMixin",
     "looseend.LooseEndOpeningPhaseClientWorldSoundMixin",
     "looseend.LooseEndOpeningPhaseHudMixin",
     "looseend.LooseEndOpeningPhaseHandRenderMixin",
@@ -53,8 +66,13 @@
     "murdermayhem.MapVotingScreenModeDescriptionMixin",
     "murdermayhem.MurderMayhemIntroHudMixin",
     "hud.InGameHudTopCenterAnchorMixin",
+    "hud.TopRightInfoHudMixin",
+    "taskpoint.TaskPointTaskTextMixin",
     "roundend.RoundTextRendererMixin",
     "roundend.RoundTextRendererSkinCacheMixin",
+    "morphling.ForgedBodyModelDispatchMixin",
+    "morphling.ForgedBodySkinMixin",
+    "morphling.ForgedPotionBodyInteractionMixin",
     "morphling.MorphlingCapeRendererMixin",
     "morphling.MorphlingCorpseAnglesMixin",
     "morphling.MorphlingCorpseRendererMixin",
@@ -67,9 +85,14 @@
     "orthopedist.OrthopedistHudMixin",
     "noisemaker.NoisemakerHudMixin",
     "phantom.PhantomHudMixin",
+    "phonism.PhonismHudMixin",
     "recaller.RecallerHudMixin",
     "reporter.ReporterHudMixin",
+    "serialkiller.SerialKillerHudMixin",
     "roleinfo.RoleInfoHudMixin",
+    "roleinfo.InventoryRoleCardMixin",
+    "dualrole.AmbienceDualSelectionMuteMixin",
+    "dualrole.AmbienceDualSelectionRestartMixin",
     "saint.SaintHudMixin",
     "hunter.DoubleBarrelShotgunCrosshairMixin",
     "hunter.HunterClientTrapCullMixin",
@@ -82,6 +105,7 @@
     "swapper.SwapperHudMixin",
     "screen.MenuHudHideMixin",
     "taotie.TaotieHudMixin",
+    "taotie.TaotieMomentCountdownMixin",
     "taotie.SpectatorHudMixin",
     "taotie.SwallowedChatHudMixin",
     "taotie.SwallowedHandRenderMixin",
@@ -101,10 +125,17 @@
     "silencer.SilencerBatClientInteractionMixin",
     "silencer.SilencerBatClientWorldSoundMixin",
     "wathe.BodyBagClientInteractionMixin",
+    "wathe.KnifeChargeHudMixin",
+    "wathe.MoodBarFixedWidthMixin",
+    "wathe.MoodNegativeScalingMixin",
+    "bartender.BaseSpiritPlatterHideMixin",
     "bartender.StimulationVignetteHudMixin",
     "bartender.StimulationMoodMixin",
+    "bartender.UnlimitedRangeCrosshairMixin",
+    "bartender.UnlimitedRangeRevolverTargetMixin",
     "hud.StatusEffectHudOffsetMixin",
-    "neutral.NeutralMoodMixin"
+    "neutral.NeutralMoodMixin",
+    "walkie.WalkieTalkieScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -113,6 +144,7 @@
     "requireAnnotations": true
   },
   "mixins": [
-    "bartender.DefenseVialViewMixin"
+    "dreameater.SleepingPillPlateViewMixin",
+    "toxicologist.AntidoteShieldPlateViewMixin"
   ]
 }

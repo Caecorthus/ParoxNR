@@ -20,6 +20,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.TypeFilter;
 import net.minecraft.util.math.BlockPos;
 import org.agmas.noellesroles.ModSounds;
 import org.agmas.noellesroles.Noellesroles;
@@ -45,6 +46,8 @@ public class BreacherPlayerComponent implements AutoSyncedComponent, ServerTicki
     private static final int MAINTAIN_TICKS_REQUIRED = GameConstants.getInTicks(0, 10);
     private static final int CHECK_INTERVAL_TICKS = 5;
     private static final int REWARD_TOTAL = 100;
+    private static final String MARKER_TAG = "noellesroles_breacher_marker";
+    private static final String MARKER_OWNER_TAG_PREFIX = "noellesroles_breacher_owner_";
 
     private final PlayerEntity player;
 
@@ -121,8 +124,22 @@ public class BreacherPlayerComponent implements AutoSyncedComponent, ServerTicki
     private boolean createPointAt(BlockPos center) {
         if (!(this.player instanceof ServerPlayerEntity serverPlayer)) return false;
         if (!(this.player.getWorld() instanceof ServerWorld serverWorld)) return false;
+        if (!isPlayerWithinPointArea(serverPlayer, center)) {
+            clearPendingPoint();
+            serverPlayer.sendMessage(Text.translatable("tip.breacher.fail_too_far"), true);
+            sync();
+            return false;
+        }
+        if (Wathe.isSkyVisibleAdjacent(this.player)) {
+            clearPendingPoint();
+            serverPlayer.sendMessage(Text.translatable("tip.breacher.fail_not_indoor"), true);
+            sync();
+            return false;
+        }
         if (!isStandableAir3x3(serverWorld, center)) {
+            clearPendingPoint();
             serverPlayer.sendMessage(Text.translatable("tip.breacher.fail_not_enough_space"), true);
+            sync();
             return false;
         }
 
@@ -142,6 +159,8 @@ public class BreacherPlayerComponent implements AutoSyncedComponent, ServerTicki
         marker.setCustomName(Text.translatable("label.breacher.break_point"));
         marker.setGlowing(true);
         marker.setSilent(true);
+        marker.addCommandTag(MARKER_TAG);
+        marker.addCommandTag(ownerMarkerTag(this.player.getUuid()));
         if (!serverWorld.spawnEntity(marker)) {
             return false;
         }
@@ -207,13 +226,21 @@ public class BreacherPlayerComponent implements AutoSyncedComponent, ServerTicki
             return;
         }
 
-        if (!pinMarkerInPlace(serverWorld)) {
-            this.pointActive = false;
-            this.pointTicksRemaining = 0;
-            this.maintainTicks = 0;
-            this.markerEntityUuid = null;
-            startCooldown();
+        if (!isActivePointStillValid(serverWorld)) {
+            clearPoint(serverWorld);
+            if (shouldStartCooldownAfterCancel(serverWorld)) {
+                startCooldown();
+            }
             sync();
+            return;
+        }
+
+        if (!pinMarkerInPlace(serverWorld)) {
+            if (serverWorld.isChunkLoaded(this.pointPos)) {
+                clearPoint(serverWorld);
+                startCooldown();
+                sync();
+            }
             return;
         }
 
@@ -299,6 +326,36 @@ public class BreacherPlayerComponent implements AutoSyncedComponent, ServerTicki
         }
     }
 
+    private void clearPendingPoint() {
+        this.pointPending = false;
+        this.pendingPointPos = BlockPos.ORIGIN;
+        this.pendingPointTicksRemaining = 0;
+    }
+
+    private boolean isActivePointStillValid(ServerWorld serverWorld) {
+        GameWorldComponent game = GameWorldComponent.KEY.get(serverWorld);
+        return game.isRunning()
+                && game.isRole(this.player, Noellesroles.BREACHER)
+                && GameFunctions.isPlayerPlayingAndAlive(this.player)
+                && !SwallowedPlayerComponent.isPlayerSwallowed(this.player);
+    }
+
+    private boolean shouldStartCooldownAfterCancel(ServerWorld serverWorld) {
+        GameWorldComponent game = GameWorldComponent.KEY.get(serverWorld);
+        return game.isRunning()
+                && game.isRole(this.player, Noellesroles.BREACHER)
+                && GameFunctions.isPlayerPlayingAndAlive(this.player);
+    }
+
+    private boolean isPlayerWithinPointArea(PlayerEntity player, BlockPos center) {
+        BlockPos min = center.add(-1, 0, -1);
+        BlockPos max = center.add(1, 1, 1);
+        BlockPos pos = player.getBlockPos();
+        return pos.getX() >= min.getX() && pos.getX() <= max.getX()
+                && pos.getY() >= min.getY() && pos.getY() <= max.getY()
+                && pos.getZ() >= min.getZ() && pos.getZ() <= max.getZ();
+    }
+
     private boolean isStandableAir3x3(ServerWorld world, BlockPos center) {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
@@ -324,24 +381,41 @@ public class BreacherPlayerComponent implements AutoSyncedComponent, ServerTicki
 
     private void removeMarkerIfPresent() {
         if (!(this.player.getWorld() instanceof ServerWorld serverWorld)) return;
-        if (this.markerEntityUuid == null) return;
-        var entity = serverWorld.getEntity(this.markerEntityUuid);
-        if (entity != null) {
-            entity.discard();
-        }
+        removeOwnedMarkers(serverWorld, this.player.getUuid(), this.markerEntityUuid);
     }
 
     private void clearPoint(ServerWorld serverWorld) {
-        if (this.markerEntityUuid != null) {
-            var entity = serverWorld.getEntity(this.markerEntityUuid);
-            if (entity != null) {
-                entity.discard();
-            }
-        }
+        removeOwnedMarkers(serverWorld, this.player.getUuid(), this.markerEntityUuid);
         this.pointActive = false;
         this.pointTicksRemaining = 0;
         this.maintainTicks = 0;
         this.markerEntityUuid = null;
+        this.checkTick = 0;
+    }
+
+    public static void cleanupMarkers(ServerWorld serverWorld) {
+        for (ItemEntity marker : serverWorld.getEntitiesByType(TypeFilter.equals(ItemEntity.class),
+                entity -> entity.getCommandTags().contains(MARKER_TAG))) {
+            marker.discard();
+        }
+    }
+
+    private static void removeOwnedMarkers(ServerWorld serverWorld, UUID ownerUuid, UUID markerUuid) {
+        if (markerUuid != null) {
+            var entity = serverWorld.getEntity(markerUuid);
+            if (entity != null) {
+                entity.discard();
+            }
+        }
+        String ownerTag = ownerMarkerTag(ownerUuid);
+        for (ItemEntity marker : serverWorld.getEntitiesByType(TypeFilter.equals(ItemEntity.class),
+                entity -> entity.getCommandTags().contains(ownerTag))) {
+            marker.discard();
+        }
+    }
+
+    private static String ownerMarkerTag(UUID ownerUuid) {
+        return MARKER_OWNER_TAG_PREFIX + ownerUuid;
     }
 
     private void recordBreakPointPlaced(ServerPlayerEntity breacher, BlockPos pos) {

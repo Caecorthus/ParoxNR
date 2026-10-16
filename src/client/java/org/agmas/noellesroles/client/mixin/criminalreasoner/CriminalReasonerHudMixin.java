@@ -12,6 +12,8 @@ import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.gui.HallucinationHudRenderer;
+import org.agmas.noellesroles.client.util.HudRenderHelper;
+import org.agmas.noellesroles.client.util.rolehud.CriminalReasonerHudRenderer;
 import org.agmas.noellesroles.criminalreasoner.CriminalReasonerPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,6 +21,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * 犯罪推理学家右下角技能提示：与其余角色一致，自底向上堆叠绘制
+ * （技能行在下，推理进度行在其上），与 CriminalReasonerHudRenderer 量取结果严格一致，
+ * 避免与其他右下角叠加行（如任务点提示）错位重叠。
+ */
 @Mixin(InGameHud.class)
 public abstract class CriminalReasonerHudMixin {
     @Shadow public abstract TextRenderer getTextRenderer();
@@ -42,18 +49,24 @@ public abstract class CriminalReasonerHudMixin {
             cooldownText = Text.translatable("hud.criminal_reasoner.press_key_hint", keyName);
         }
 
-        int requiredReasoningCount = Math.floorDiv(gameWorldComponent.getAllPlayers().size(), 4);
+        int requiredReasoningCount = criminalReasonerComponent.getRequiredReasoningCount();
         Text progressText = Text.translatable(
                 "hud.criminal_reasoner.progress",
                 criminalReasonerComponent.getSuccessfulReasoningCount(),
                 requiredReasoningCount
         );
+        Text invisibilityText = CriminalReasonerHudRenderer.getInvisibilityLine(
+                MinecraftClient.getInstance().player, criminalReasonerComponent);
 
-        int progressY = context.getScaledWindowHeight() - 25;
-        int cooldownY = context.getScaledWindowHeight() - 15;
-        int progressX = context.getScaledWindowWidth() - getTextRenderer().getWidth(progressText);
-        int cooldownX = context.getScaledWindowWidth() - getTextRenderer().getWidth(cooldownText);
-        context.drawTextWithShadow(getTextRenderer(), progressText, progressX, progressY, Noellesroles.CRIMINAL_REASONER.color());
-        context.drawTextWithShadow(getTextRenderer(), cooldownText, cooldownX, cooldownY, Noellesroles.CRIMINAL_REASONER.color());
+        TextRenderer renderer = getTextRenderer();
+        int color = Noellesroles.CRIMINAL_REASONER.color();
+
+        // 技能行贴底，隐身行与推理进度行依次向上（与 CriminalReasonerHudRenderer 的堆叠顺序一致）
+        int drawY = context.getScaledWindowHeight() - renderer.getWrappedLinesHeight(cooldownText, 999999);
+        HudRenderHelper.drawRightAligned(context, renderer, cooldownText, 0, drawY, color);
+        drawY -= renderer.getWrappedLinesHeight(invisibilityText, 999999);
+        HudRenderHelper.drawRightAligned(context, renderer, invisibilityText, 0, drawY, color);
+        drawY -= renderer.getWrappedLinesHeight(progressText, 999999);
+        HudRenderHelper.drawRightAligned(context, renderer, progressText, 0, drawY, color);
     }
 }

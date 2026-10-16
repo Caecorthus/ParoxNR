@@ -20,6 +20,7 @@ import net.minecraft.util.UseAction;
 import net.minecraft.world.World;
 import org.agmas.noellesroles.NoellesRolesEntities;
 import org.agmas.noellesroles.entity.ThrowingAxeEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -40,6 +41,8 @@ public class ThrowingAxeItem extends Item {
     @Override
     public void onStoppedUsing(ItemStack stack, World world, LivingEntity user, int remainingUseTicks) {
         if (!(user instanceof PlayerEntity player)) return;
+        // 蓄力期间飞斧被「掷出全部」等技能消耗时，松手不应再凭空掷出一把
+        if (stack.isEmpty()) return;
 
         int useDuration = this.getMaxUseTime(stack, user) - remainingUseTicks;
         float power = getPowerForTime(useDuration);
@@ -50,13 +53,9 @@ public class ThrowingAxeItem extends Item {
                 SoundEvents.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 1.0F, 1.0F);
 
         if (!world.isClient) {
-            ThrowingAxeEntity axeEntity = new ThrowingAxeEntity(NoellesRolesEntities.THROWING_AXE_ENTITY, world);
-            axeEntity.setOwner(player);
-            axeEntity.initFromStack(stack);
-            axeEntity.setPosition(player.getX(), player.getEyeY() - 0.1, player.getZ());
-            float velocity = 0.4F + (power * 2.0F);
-            axeEntity.setVelocity(player, player.getPitch(), player.getYaw(), 0.0F, velocity, 1.0F);
-            world.spawnEntity(axeEntity);
+            // 曲线整体 ×1.25：满蓄力 3 格/tick（60 m/s），蓄力仍影响速度
+            float velocity = (0.4F + (power * 2.0F)) * 1.25F;
+            spawnAxe(world, player, stack, player.getX(), player.getEyeY() - 0.1, player.getZ(), velocity, 1.0F, null);
 
             if (player instanceof ServerPlayerEntity serverPlayer) {
                 GameRecordManager.recordItemUse(serverPlayer, Registries.ITEM.getId(this), null, null);
@@ -68,6 +67,22 @@ public class ThrowingAxeItem extends Item {
             player.getItemCooldownManager().set(this, LOOSE_END_COOLDOWN_TICKS);
         }
         player.incrementStat(Stats.USED.getOrCreateStat(this));
+    }
+
+    /**
+     * 在指定位置生成一把沿投掷者视线方向飞行的飞斧，供普通投掷与强盗「掷出全部」共用。
+     * killSequence 为 null 时该飞斧自建独立序列（普通投掷）；齐掷传入共享序列以便整次施放共用击杀序号。
+     */
+    public static void spawnAxe(World world, PlayerEntity thrower, ItemStack stack,
+                                double x, double y, double z, float velocity, float divergence,
+                                @Nullable ThrowingAxeEntity.AxeKillSequence killSequence) {
+        ThrowingAxeEntity axeEntity = new ThrowingAxeEntity(NoellesRolesEntities.THROWING_AXE_ENTITY, world);
+        axeEntity.setOwner(thrower);
+        axeEntity.initFromStack(stack);
+        axeEntity.setPosition(x, y, z);
+        axeEntity.setVelocity(thrower, thrower.getPitch(), thrower.getYaw(), 0.0F, velocity, divergence);
+        axeEntity.setKillSequence(killSequence);
+        world.spawnEntity(axeEntity);
     }
 
     public static float getPowerForTime(int time) {

@@ -13,6 +13,7 @@ import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.gui.HallucinationHudRenderer;
+import org.agmas.noellesroles.client.util.HudRenderHelper;
 import org.agmas.noellesroles.silencer.SilencerPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,16 +46,14 @@ public abstract class SilencerHudMixin {
                 int cooldownSeconds = abilityComp.getCooldown() / 20;
                 Text cooldownText = Text.translatable("tip.noellesroles.cooldown", cooldownSeconds);
                 drawY -= getTextRenderer().getWrappedLinesHeight(cooldownText, 999999);
-                context.drawTextWithShadow(getTextRenderer(), cooldownText,
-                        context.getScaledWindowWidth() - getTextRenderer().getWidth(cooldownText), drawY, color);
+                HudRenderHelper.drawRightAligned(context, getTextRenderer(), cooldownText, 0, drawY, color);
             } else if (silencerComp.hasMarkedTarget()) {
                 // 已标记目标 → 显示确认释放提示
                 String keyName = NoellesrolesClient.abilityBind.getBoundKeyLocalizedText().getString();
                 int remainingSeconds = silencerComp.getMarkTicksRemaining() / 20;
                 Text confirmHint = Text.translatable("tip.silencer.confirm", keyName, silencerComp.getMarkedTargetName(), remainingSeconds);
                 drawY -= getTextRenderer().getWrappedLinesHeight(confirmHint, 999999);
-                context.drawTextWithShadow(getTextRenderer(), confirmHint,
-                        context.getScaledWindowWidth() - getTextRenderer().getWidth(confirmHint), drawY, color);
+                HudRenderHelper.drawRightAligned(context, getTextRenderer(), confirmHint, 0, drawY, color);
             } else {
                 // 没有标记 → 显示标记提示
                 if (NoellesrolesClient.crosshairTarget != null && NoellesrolesClient.crosshairTargetDistance <= 3.0) {
@@ -62,14 +61,12 @@ public abstract class SilencerHudMixin {
                     String targetName = NoellesrolesClient.crosshairTarget.getName().getString();
                     Text markHint = Text.translatable("tip.silencer.mark", keyName, targetName);
                     drawY -= getTextRenderer().getWrappedLinesHeight(markHint, 999999);
-                    context.drawTextWithShadow(getTextRenderer(), markHint,
-                            context.getScaledWindowWidth() - getTextRenderer().getWidth(markHint), drawY, color);
+                    HudRenderHelper.drawRightAligned(context, getTextRenderer(), markHint, 0, drawY, color);
                 } else {
                     String keyName = NoellesrolesClient.abilityBind.getBoundKeyLocalizedText().getString();
                     Text readyHint = Text.translatable("tip.silencer.ready", keyName);
                     drawY -= getTextRenderer().getWrappedLinesHeight(readyHint, 999999);
-                    context.drawTextWithShadow(getTextRenderer(), readyHint,
-                            context.getScaledWindowWidth() - getTextRenderer().getWidth(readyHint), drawY, color);
+                    HudRenderHelper.drawRightAligned(context, getTextRenderer(), readyHint, 0, drawY, color);
                 }
             }
         }

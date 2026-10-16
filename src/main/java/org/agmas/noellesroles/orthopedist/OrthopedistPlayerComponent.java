@@ -31,6 +31,7 @@ public class OrthopedistPlayerComponent implements AutoSyncedComponent, ServerTi
     private static final Identifier BONE_SETTING_STAMINA_MODIFIER_ID = Identifier.of(Noellesroles.MOD_ID, "bone_setting_stamina");
     private static final double PASSIVE_STAMINA_BONUS = 0.25D;
     private static final double BONE_SETTING_STAMINA_BONUS = 1.0D / 3.0D;
+    private static final int BONE_SETTING_DURATION_TICKS = GameConstants.getInTicks(0, 20);
 
     private final PlayerEntity player;
     private boolean passiveApplied = false;
@@ -50,8 +51,8 @@ public class OrthopedistPlayerComponent implements AutoSyncedComponent, ServerTi
     }
 
     public static void applyBoneSetting(ServerPlayerEntity target) {
-        target.addStatusEffect(new StatusEffectInstance(ModEffects.BONE_SETTING, GameConstants.getInTicks(0, 20), 0, false, true, true));
-        target.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, GameConstants.getInTicks(0, 5), 0, false, true, true));
+        target.addStatusEffect(new StatusEffectInstance(ModEffects.BONE_SETTING, BONE_SETTING_DURATION_TICKS, 0, false, true, true));
+        target.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, BONE_SETTING_DURATION_TICKS, 0, false, true, true));
         refreshBoneSetting(target);
     }
 
