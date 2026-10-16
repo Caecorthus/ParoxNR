@@ -25,6 +25,7 @@ public final class BodyTargetHelper {
     public static final double DEFAULT_RANGE = 2.0D;
     public static final double SKILL_RANGE = 5.0D;
     public static final double SPECTATOR_RANGE = 8.0D;
+    public static final double JUNKER_RANGE = 3.0D;
 
     private BodyTargetHelper() {}
 
@@ -36,6 +37,9 @@ public final class BodyTargetHelper {
         GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
         if (gameWorld.isRole(player, Noellesroles.VULTURE) || gameWorld.isRole(player, Noellesroles.FERRYMAN)) {
             return SKILL_RANGE;
+        }
+        if (gameWorld.isRole(player, Noellesroles.JUNKER)) {
+            return JUNKER_RANGE;
         }
 
         return DEFAULT_RANGE;
