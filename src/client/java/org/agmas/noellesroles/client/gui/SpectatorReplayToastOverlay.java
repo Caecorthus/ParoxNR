@@ -27,8 +27,21 @@ public final class SpectatorReplayToastOverlay {
 
     private static boolean awaitingSessionBaseline = true;
     private static long activeMatchStartTick = Long.MIN_VALUE;
+    private static boolean renderedViaVoiceChatThisFrame;
 
     private SpectatorReplayToastOverlay() {
+    }
+
+    public static void beginHudFrame() {
+        renderedViaVoiceChatThisFrame = false;
+    }
+
+    public static void markVoiceChatRendered() {
+        renderedViaVoiceChatThisFrame = true;
+    }
+
+    public static boolean wasRenderedViaVoiceChatThisFrame() {
+        return renderedViaVoiceChatThisFrame;
     }
 
     public static long getLastSeenReplayTick() {
