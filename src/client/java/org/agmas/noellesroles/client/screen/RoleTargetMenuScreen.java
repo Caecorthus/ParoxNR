@@ -11,11 +11,15 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.ConfigWorldComponent;
+import org.agmas.noellesroles.ModItems;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.item.ForgedPotionItem;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
+import org.agmas.noellesroles.packet.ForgedPotionSelectC2SPacket;
 import org.agmas.noellesroles.packet.MorphC2SPacket;
 import org.agmas.noellesroles.packet.SwapperC2SPacket;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
@@ -113,12 +117,14 @@ public class RoleTargetMenuScreen extends Screen {
             return false;
         }
         return switch (this.menuType) {
+            // 拾荒者搜刮到巫毒娃娃后同样可以正常绑定
             case VOODOO -> gameWorld.isRole(this.player, Noellesroles.VOODOO)
-                    && AbilityPlayerComponent.KEY.get(this.player).getCooldown() <= 0;
+                    || gameWorld.isRole(this.player, Noellesroles.JUNKER);
             case SWAPPER -> gameWorld.isRole(this.player, Noellesroles.SWAPPER)
                     && AbilityPlayerComponent.KEY.get(this.player).getCooldown() <= 0;
             case MORPHLING -> gameWorld.isRole(this.player, Noellesroles.MORPHLING)
                     && MorphlingPlayerComponent.KEY.get(this.player).getMorphTicks() == 0;
+            case FORGED_POTION -> gameWorld.isRole(this.player, Noellesroles.MORPHLING);
         };
     }
 
@@ -152,9 +158,12 @@ public class RoleTargetMenuScreen extends Screen {
                     result.add(new TargetEntry(uuid, ShopEntry.Type.POISON));
                 }
             }
-            case MORPHLING -> {
+            case MORPHLING, FORGED_POTION -> {
+                // 变形菜单不包含自己；赝造药水可选任意玩家（含自己与已死亡玩家）
                 List<UUID> allPlayers = new ArrayList<>(gameWorld.getAllPlayers());
-                allPlayers.remove(this.player.getUuid());
+                if (this.menuType == MenuType.MORPHLING) {
+                    allPlayers.remove(this.player.getUuid());
+                }
                 for (UUID uuid : WatheClient.PLAYER_ENTRIES_CACHE.keySet()) {
                     if (!allPlayers.contains(uuid)) {
                         continue;
@@ -176,13 +185,32 @@ public class RoleTargetMenuScreen extends Screen {
             case VOODOO -> Objects.equals(VoodooPlayerComponent.KEY.get(this.player).target, uuid);
             case SWAPPER -> Objects.equals(this.firstSelection, uuid) || Objects.equals(this.secondSelection, uuid);
             case MORPHLING -> false;
+            case FORGED_POTION -> Objects.equals(ForgedPotionItem.getTarget(getHeldPotion()), uuid);
         };
+    }
+
+    private static ItemStack getHeldPotion() {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) {
+            return ItemStack.EMPTY;
+        }
+        if (player.getMainHandStack().isOf(ModItems.FORGED_POTION)) {
+            return player.getMainHandStack();
+        }
+        if (player.getOffHandStack().isOf(ModItems.FORGED_POTION)) {
+            return player.getOffHandStack();
+        }
+        return ItemStack.EMPTY;
     }
 
     private void handleSelection(UUID targetUuid) {
         switch (this.menuType) {
             case VOODOO, MORPHLING -> {
                 ClientPlayNetworking.send(new MorphC2SPacket(targetUuid));
+                this.close();
+            }
+            case FORGED_POTION -> {
+                ClientPlayNetworking.send(new ForgedPotionSelectC2SPacket(targetUuid));
                 this.close();
             }
             case SWAPPER -> {
@@ -240,6 +268,7 @@ public class RoleTargetMenuScreen extends Screen {
             case VOODOO -> Text.translatable("screen.role_target.voodoo.subtitle");
             case SWAPPER -> Text.translatable("screen.role_target.swapper.subtitle");
             case MORPHLING -> Text.translatable("screen.role_target.morphling.subtitle");
+            case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.subtitle");
         };
     }
 
@@ -270,6 +299,15 @@ public class RoleTargetMenuScreen extends Screen {
                 }
             }
             case MORPHLING -> {
+            }
+            case FORGED_POTION -> {
+                UUID currentTarget = ForgedPotionItem.getTarget(getHeldPotion());
+                if (currentTarget != null) {
+                    lines.add(Text.translatable("item.noellesroles.forged_potion.target",
+                            RoleScreenHelper.getPlayerName(currentTarget, UNKNOWN_PLAYER_TEXT)));
+                } else {
+                    lines.add(Text.translatable("item.noellesroles.forged_potion.no_target"));
+                }
             }
         }
         return lines;
@@ -310,7 +348,8 @@ public class RoleTargetMenuScreen extends Screen {
     public enum MenuType {
         VOODOO(0xFF000000 | (Noellesroles.VOODOO.color() & 0x00FFFFFF)),
         SWAPPER(0xFF000000 | (Noellesroles.SWAPPER.color() & 0x00FFFFFF)),
-        MORPHLING(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF));
+        MORPHLING(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF)),
+        FORGED_POTION(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF));
 
         private final int accentColor;
 
@@ -323,6 +362,7 @@ public class RoleTargetMenuScreen extends Screen {
                 case VOODOO -> Text.translatable("screen.role_target.voodoo.title");
                 case SWAPPER -> Text.translatable("screen.role_target.swapper.title");
                 case MORPHLING -> Text.translatable("screen.role_target.morphling.title");
+                case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.title");
             };
         }
 
@@ -331,6 +371,7 @@ public class RoleTargetMenuScreen extends Screen {
                 case VOODOO -> Text.translatable("screen.role_target.voodoo.empty");
                 case SWAPPER -> Text.translatable("screen.role_target.swapper.empty");
                 case MORPHLING -> Text.translatable("screen.role_target.morphling.empty");
+                case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.empty");
             };
         }
     }

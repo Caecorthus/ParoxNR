@@ -8,7 +8,7 @@ import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.entity.feature.ElytraFeatureRenderer;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.entity.player.PlayerEntity;
-import org.agmas.noellesroles.client.hallucination.ClientHallucinationVisualHelper;
+import org.agmas.noellesroles.client.morphling.ClientMorphlingScrambleHelper;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,7 +20,7 @@ public class MorphlingElytraRendererMixin {
 
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getSkinTextures()Lnet/minecraft/client/util/SkinTextures;"))
     private SkinTextures noellesroles$wrapElytraTexture(AbstractClientPlayerEntity instance, Operation<SkinTextures> original) {
-        SkinTextures shuffledTextures = ClientHallucinationVisualHelper.getShuffledSkinTextures(instance);
+        SkinTextures shuffledTextures = ClientMorphlingScrambleHelper.getScrambledSkinTextures(instance);
         if (shuffledTextures != null) {
             return shuffledTextures;
         }
