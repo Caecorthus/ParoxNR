@@ -28,6 +28,10 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
     private final Map<UUID, UUID> victimToKiller = new HashMap<>();
     private final Set<UUID> solvedVictims = new HashSet<>();
     private int successfulReasoningCount;
+    // 开局人数三分之一向下取整，作为胜利所需的成功推理数
+    private int requiredReasoningCount;
+    // 每次新推理成功奖励的隐身充能
+    private int invisibilityCharges;
 
     public CriminalReasonerPlayerComponent(PlayerEntity player) {
         this.player = player;
@@ -37,6 +41,8 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
         this.victimToKiller.clear();
         this.solvedVictims.clear();
         this.successfulReasoningCount = 0;
+        this.requiredReasoningCount = 0;
+        this.invisibilityCharges = 0;
         this.sync();
     }
 
@@ -71,12 +77,35 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
         // 同一名死者只记一次成功推理，避免重复推理刷胜利进度。
         this.solvedVictims.add(victimUuid);
         this.successfulReasoningCount++;
+        this.invisibilityCharges++;
         this.sync();
         return true;
     }
 
     public int getSuccessfulReasoningCount() {
         return this.successfulReasoningCount;
+    }
+
+    public int getRequiredReasoningCount() {
+        return this.requiredReasoningCount;
+    }
+
+    public void setRequiredReasoningCount(int requiredReasoningCount) {
+        this.requiredReasoningCount = requiredReasoningCount;
+        this.sync();
+    }
+
+    public int getInvisibilityCharges() {
+        return this.invisibilityCharges;
+    }
+
+    public boolean consumeInvisibilityCharge() {
+        if (this.invisibilityCharges <= 0) {
+            return false;
+        }
+        this.invisibilityCharges--;
+        this.sync();
+        return true;
     }
 
     public boolean hasSolvedVictim(UUID victimUuid) {
@@ -90,8 +119,10 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
 
     @Override
     public void writeSyncPacket(RegistryByteBuf buf, ServerPlayerEntity recipient) {
-        // 只同步 successfulReasoningCount 和 solvedVictims，不同步 victimToKiller 以防作弊客户端读取答案。
+        // 只同步进度类字段，不同步 victimToKiller 以防作弊客户端读取答案。
         buf.writeInt(this.successfulReasoningCount);
+        buf.writeInt(this.requiredReasoningCount);
+        buf.writeInt(this.invisibilityCharges);
         buf.writeInt(this.solvedVictims.size());
         for (UUID solved : this.solvedVictims) {
             buf.writeUuid(solved);
@@ -101,6 +132,8 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
     @Override
     public void applySyncPacket(RegistryByteBuf buf) {
         this.successfulReasoningCount = buf.readInt();
+        this.requiredReasoningCount = buf.readInt();
+        this.invisibilityCharges = buf.readInt();
         this.solvedVictims.clear();
         int solvedCount = buf.readInt();
         for (int i = 0; i < solvedCount; i++) {
@@ -113,6 +146,10 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
         this.victimToKiller.clear();
         this.solvedVictims.clear();
         this.successfulReasoningCount = nbtCompound.getInt("successfulReasoningCount");
+        this.requiredReasoningCount = nbtCompound.contains("requiredReasoningCount")
+                ? nbtCompound.getInt("requiredReasoningCount") : 0;
+        this.invisibilityCharges = nbtCompound.contains("invisibilityCharges")
+                ? nbtCompound.getInt("invisibilityCharges") : 0;
         if (nbtCompound.contains("victimToKiller")) {
             NbtCompound mappingTag = nbtCompound.getCompound("victimToKiller");
             for (String key : mappingTag.getKeys()) {
@@ -150,5 +187,7 @@ public class CriminalReasonerPlayerComponent implements AutoSyncedComponent {
         }
         nbtCompound.put("solvedVictims", solvedList);
         nbtCompound.putInt("successfulReasoningCount", this.successfulReasoningCount);
+        nbtCompound.putInt("requiredReasoningCount", this.requiredReasoningCount);
+        nbtCompound.putInt("invisibilityCharges", this.invisibilityCharges);
     }
 }
