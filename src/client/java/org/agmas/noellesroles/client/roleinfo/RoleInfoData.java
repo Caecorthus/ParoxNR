@@ -10,6 +10,8 @@ import java.util.Map;
 public class RoleInfoData {
     public String nameKey;
     public String factionKey;
+    /** One-line plain-language summary of the role kit, shown on the inventory card. */
+    public String summaryKey;
     public String descriptionKey;
     public String winConditionKey;
     private String roleId;
