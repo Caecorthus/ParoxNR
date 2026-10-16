@@ -17,9 +17,11 @@ public class VoodooPlayerComponent implements AutoSyncedComponent {
     public static final ComponentKey<VoodooPlayerComponent> KEY = ComponentRegistry.getOrCreate(Identifier.of(Noellesroles.MOD_ID, "voodoo"), VoodooPlayerComponent.class);
     private final PlayerEntity player;
     public UUID target;
+    private int dollPurchases = 0;
 
     public void reset() {
         this.target = player.getUuid();
+        this.dollPurchases = 0;
         this.sync();
     }
 
@@ -41,11 +43,22 @@ public class VoodooPlayerComponent implements AutoSyncedComponent {
         this.sync();
     }
 
+    public int getDollPurchases() {
+        return this.dollPurchases;
+    }
+
+    public void addDollPurchase() {
+        this.dollPurchases++;
+        this.sync();
+    }
+
     public void writeToNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
-        tag.putUuid("target", player.getUuid());
+        tag.putUuid("target", this.target != null ? this.target : player.getUuid());
+        tag.putInt("dollPurchases", this.dollPurchases);
     }
 
     public void readFromNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         this.target = tag.contains("target") ? tag.getUuid("target") : player.getUuid();
+        this.dollPurchases = tag.contains("dollPurchases") ? tag.getInt("dollPurchases") : 0;
     }
 }
