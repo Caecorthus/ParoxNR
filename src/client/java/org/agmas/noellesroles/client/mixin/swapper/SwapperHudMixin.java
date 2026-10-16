@@ -40,7 +40,7 @@ public abstract class SwapperHudMixin {
         HudRenderHelper.pushAboveVoiceChatHudLayer(context);
         try {
             int drawY = context.getScaledWindowHeight() - getTextRenderer().getWrappedLinesHeight(line, 999999);
-            context.drawTextWithShadow(getTextRenderer(), line, context.getScaledWindowWidth() - getTextRenderer().getWidth(line), drawY, Noellesroles.SWAPPER.color());
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), line, 0, drawY, Noellesroles.SWAPPER.color());
         } finally {
             HudRenderHelper.popAboveVoiceChatHudLayer(context);
         }
