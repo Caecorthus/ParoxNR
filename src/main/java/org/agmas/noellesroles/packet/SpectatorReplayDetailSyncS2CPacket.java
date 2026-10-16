@@ -30,7 +30,7 @@ public record SpectatorReplayDetailSyncS2CPacket(long requestId,
         buf.writeUuid(targetUuid);
         buf.writeVarInt(replayLines.size());
         for (String line : replayLines) {
-            buf.writeString(line, 512);
+            buf.writeString(line, 4096);
         }
     }
 
@@ -40,7 +40,7 @@ public record SpectatorReplayDetailSyncS2CPacket(long requestId,
         int lineCount = buf.readVarInt();
         List<String> replayLines = new ArrayList<>(lineCount);
         for (int i = 0; i < lineCount; i++) {
-            replayLines.add(buf.readString(512));
+            replayLines.add(buf.readString(4096));
         }
         return new SpectatorReplayDetailSyncS2CPacket(requestId, targetUuid, replayLines);
     }

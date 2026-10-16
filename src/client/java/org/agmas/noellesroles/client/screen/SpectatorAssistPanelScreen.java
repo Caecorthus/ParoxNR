@@ -33,6 +33,8 @@ public class SpectatorAssistPanelScreen extends Screen {
     private static final int ROW_HEIGHT = 30;
     private static final int AVATAR_SIZE = 16;
     private static final int HOVER_LINE_HEIGHT = 9;
+    /** Wathe 金币字形 U+E781（与 StoreRenderer 绘制金币时使用的字符一致）。 */
+    private static final String COIN_GLYPH = String.valueOf((char) 0xE781);
 
     private static long NEXT_REQUEST_ID = 1L;
     private static SpectatorAssistPanelScreen ACTIVE_INSTANCE;
@@ -113,7 +115,8 @@ public class SpectatorAssistPanelScreen extends Screen {
             Identifier skinTexture = playerEntry != null
                     ? playerEntry.getSkinTextures().texture()
                     : DefaultSkinHelper.getSkinTextures(new GameProfile(uuid, nameText.getString())).texture();
-            entries.add(new EntryData(uuid, nameText, roleText, roleColor, online, dead, self, deathReasonText, latestRelevantReplayTick, replaySummary, skinTexture));
+            int balance = syncData != null ? syncData.balance() : -1;
+            entries.add(new EntryData(uuid, nameText, roleText, roleColor, online, dead, self, deathReasonText, latestRelevantReplayTick, replaySummary, skinTexture, balance));
         }
 
         Layout layout = getLayout();
@@ -191,9 +194,13 @@ public class SpectatorAssistPanelScreen extends Screen {
             if (entry.self) {
                 reservedTagWidth += selfTagWidth + 2;
             }
-            int roleWidth = Math.max(0, textWidth - reservedTagWidth);
+            int roleWidth = Math.max(0, textWidth - reservedTagWidth - coinReservedWidth(entry.balance));
             String roleLine = font.trimToWidth(entry.roleText.getString(), roleWidth);
             context.drawTextWithShadow(font, Text.literal(roleLine), textX, y + 15, entry.roleColor);
+
+            if (entry.balance >= 0) {
+                drawBalance(context, font, textX + textWidth, y + 15, entry.balance);
+            }
             int tagX = textX + font.getWidth(roleLine) + 2;
             if (entry.dead) {
                 context.drawTextWithShadow(font, deadTag, tagX, y + 15, 0xFFFF5555);
@@ -309,7 +316,7 @@ public class SpectatorAssistPanelScreen extends Screen {
                 && NoellesrolesClient.roleInfoBind.matchesKey(keyCode, scanCode)) {
             NoellesrolesClient.markRoleInfoKeyHandled();
             if (this.client != null) {
-                this.client.setScreen(new RoleInfoScreen());
+                this.client.setScreen(RoleInfoScreen.create());
             }
             return true;
         }
@@ -323,6 +330,25 @@ public class SpectatorAssistPanelScreen extends Screen {
 
     private static boolean isInRect(int mouseX, int mouseY, int x, int y, int width) {
         return width > 0 && mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + HOVER_LINE_HEIGHT;
+    }
+
+    /** 角色行右侧金币显示预留的宽度：金币图标 8 + 每位数字 8 + 与角色名 2 像素间距；没有金币系统（-1）时为 0。 */
+    private static int coinReservedWidth(int balance) {
+        return balance >= 0 ? 8 + String.valueOf(balance).length() * 8 + 2 : 0;
+    }
+
+    /**
+     * 直接绘制金币数：Wathe 的金币字形 + 数字（数字向左展开、每位间隔 8 像素，与原版 HUD 排版一致）。
+     * 面板每秒刷新一次，不做原版的滚动动画，避免读数跳动。
+     */
+    private static void drawBalance(DrawContext context, TextRenderer font, int rightEdge, int y, int balance) {
+        context.drawTextWithShadow(font, COIN_GLYPH, rightEdge - 8, y, 0xFFFFFFFF);
+        String digits = String.valueOf(balance);
+        int digitX = rightEdge - 16;
+        for (int i = digits.length() - 1; i >= 0; i--) {
+            context.drawTextWithShadow(font, String.valueOf(digits.charAt(i)), digitX, y, 0xFFFFFFFF);
+            digitX -= 8;
+        }
     }
 
     private static boolean canOpenSpectatorPanel(ClientPlayerEntity player, GameWorldComponent gwc) {
@@ -498,7 +524,8 @@ public class SpectatorAssistPanelScreen extends Screen {
                     entry.deathTick(),
                     entry.deathAgeSeconds(),
                     entry.latestRelevantReplayTick(),
-                    Text.literal(entry.replaySummary())
+                    deserializeReplayText(entry.replaySummary()),
+                    entry.balance()
             ));
         }
         pruneReplayDetailCache();
@@ -614,9 +641,27 @@ public class SpectatorAssistPanelScreen extends Screen {
         }
         List<Text> lines = new ArrayList<>();
         for (String replayLine : replayLines) {
-            lines.add(Text.literal(replayLine));
+            lines.add(deserializeReplayText(replayLine));
         }
         return lines;
+    }
+
+    // 服务端将回放行序列化为文本组件 JSON，客户端反序列化后按自身语言设置本地化
+    private static Text deserializeReplayText(String json) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (json == null || json.isBlank()) {
+            return Text.empty();
+        }
+        if (client.world != null) {
+            try {
+                Text parsed = Text.Serialization.fromJson(json, client.world.getRegistryManager());
+                if (parsed != null) {
+                    return parsed;
+                }
+            } catch (RuntimeException ignored) {
+            }
+        }
+        return Text.literal(json);
     }
 
     private static long resolveDeathTick(ServerSyncData syncData) {
@@ -641,13 +686,14 @@ public class SpectatorAssistPanelScreen extends Screen {
                              Text deathReasonText,
                              long latestRelevantReplayTick,
                              Text replaySummary,
-                             Identifier skinTexture) {
+                             Identifier skinTexture,
+                             int balance) {
     }
 
     private record Layout(int startX, int listTop, int rowsPerPage, int columnWidth) {
     }
 
-    private record ServerSyncData(String roleTranslationKey, int roleColor, String deathReasonRaw, long deathTick, int deathAgeSeconds, long latestRelevantReplayTick, Text replaySummary) {
+    private record ServerSyncData(String roleTranslationKey, int roleColor, String deathReasonRaw, long deathTick, int deathAgeSeconds, long latestRelevantReplayTick, Text replaySummary, int balance) {
     }
 
     private record ReplayDetailState(long versionTick, List<Text> replayLines, boolean pending) {
