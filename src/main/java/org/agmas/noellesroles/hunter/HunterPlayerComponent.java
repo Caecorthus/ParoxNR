@@ -31,7 +31,7 @@ public class HunterPlayerComponent implements AutoSyncedComponent, ServerTicking
     private static final Identifier FRACTURE_SPEED_MODIFIER_ID = Identifier.of(Noellesroles.MOD_ID, "fracture_speed");
 
     public static final int TRAP_ROOT_TICKS = 20 * 3;
-    public static final int FRACTURE_LAYER_TICKS = 20 * 60;
+    public static final int FRACTURE_LAYER_TICKS = 20 * 75;
     public static final int MAX_FRACTURE_LAYERS = 5;
 
     public static final int MAX_TRAPS = 2;

@@ -3,7 +3,6 @@ package org.agmas.noellesroles.client.mixin.voicechat;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import org.agmas.noellesroles.client.gui.AssistInterfaceHintOverlay;
 import org.agmas.noellesroles.client.gui.SpectatorReplayToastOverlay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,8 +17,7 @@ public abstract class VoiceChatGuiMixin {
         if (textRenderer == null) {
             return;
         }
-        AssistInterfaceHintOverlay.markVoiceChatRendered();
+        SpectatorReplayToastOverlay.markVoiceChatRendered();
         SpectatorReplayToastOverlay.render(context, textRenderer);
-        AssistInterfaceHintOverlay.render(context, textRenderer);
     }
 }

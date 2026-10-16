@@ -16,6 +16,9 @@ public class ModSounds {
     public static final SoundEvent CORRUPT_COP_EXECUTION = registerSound("ambient.corrupt_cop_execution");
     // 小丑时刻BGM
     public static final SoundEvent JESTER_MOMENT = registerSound("music.jester_moment");
+    // 谎言音效师伪造的疯魔模式BGM：音频复用 wathe 的 psycho_drone，但挂在本模组的音效 id 下，
+    // 这样按 id 发送停止包时不会误停真正的疯魔背景音
+    public static final SoundEvent PSYCHO_DRONE = registerSound("ambient.psycho_drone");
 
     private static SoundEvent registerSound(String name) {
         Identifier id = Identifier.of(Noellesroles.MOD_ID, name);

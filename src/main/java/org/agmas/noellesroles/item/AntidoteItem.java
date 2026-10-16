@@ -21,6 +21,7 @@ import net.minecraft.util.UseAction;
 import net.minecraft.world.World;
 import org.agmas.noellesroles.hallucination.HallucinationDummyInteractionHelper;
 import org.agmas.noellesroles.hallucination.HallucinationPlayerComponent;
+import org.agmas.noellesroles.toxicologist.AntidoteShieldPlayerComponent;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -28,12 +29,14 @@ import java.util.UUID;
 public class AntidoteItem extends Item {
     // Charge time: 1.5 seconds = 30 ticks
     private static final int USE_TIME = 30;
-    // Cooldown after use: 3 minutes = 3 * 60 * 20 ticks
-    public static final int COOLDOWN_TICKS = 3 * 60 * 20;
+    // Cooldown after use: 2 minutes = 2 * 60 * 20 ticks
+    public static final int COOLDOWN_TICKS = 2 * 60 * 20;
     // Initial cooldown at game start: 2 minutes = 2 * 60 * 20 ticks
-    public static final int INITIAL_COOLDOWN_TICKS = 2 * 60 * 20;
+    public static final int INITIAL_COOLDOWN_TICKS = COOLDOWN_TICKS;
     // Max distance to target: 3 blocks
     private static final double MAX_DISTANCE_SQ = 9.0;
+    // Tag marking a preemptive use (target is not poisoned yet)
+    private static final String SHIELD_TAG = "shield";
 
     public AntidoteItem(Settings settings) {
         super(settings);
@@ -70,15 +73,19 @@ public class AntidoteItem extends Item {
             return ActionResult.PASS;
         }
 
-        // Check if target is poisoned
         PlayerPoisonComponent poisonComp = PlayerPoisonComponent.KEY.get(target);
-        if (poisonComp.poisonTicks <= 0) {
+        boolean shielding = poisonComp.poisonTicks <= 0;
+        // A shielded player cannot be shielded again
+        if (shielding && AntidoteShieldPlayerComponent.KEY.get(target).hasShield()) {
             return ActionResult.PASS;
         }
 
         // Store target UUID in item stack for later use
         NbtCompound nbt = new NbtCompound();
         nbt.putUuid("target", target.getUuid());
+        if (shielding) {
+            nbt.putBoolean(SHIELD_TAG, true);
+        }
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
 
         // Start the use action (arm-raising animation)
@@ -99,15 +106,18 @@ public class AntidoteItem extends Item {
             return TypedActionResult.pass(stack);
         }
 
-        // Check if self is poisoned
         PlayerPoisonComponent poisonComp = PlayerPoisonComponent.KEY.get(user);
-        if (poisonComp.poisonTicks <= 0) {
+        boolean shielding = poisonComp.poisonTicks <= 0;
+        if (shielding && AntidoteShieldPlayerComponent.KEY.get(user).hasShield()) {
             return TypedActionResult.pass(stack);
         }
 
         // Store self UUID as target
         NbtCompound nbt = new NbtCompound();
         nbt.putUuid("target", user.getUuid());
+        if (shielding) {
+            nbt.putBoolean(SHIELD_TAG, true);
+        }
         stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
 
         user.setCurrentHand(hand);
@@ -136,14 +146,22 @@ public class AntidoteItem extends Item {
             }
         } else {
             PlayerEntity target = world.getPlayerByUuid(targetUuid);
-            if (target == null || user.squaredDistanceTo(target) > MAX_DISTANCE_SQ) {
+            if (target == null || user.squaredDistanceTo(target) > MAX_DISTANCE_SQ
+                    || !GameFunctions.isPlayerAliveAndSurvival(target)) {
                 user.stopUsingItem();
                 clearTargetUuid(stack);
                 return;
             }
 
             PlayerPoisonComponent poisonComp = PlayerPoisonComponent.KEY.get(target);
-            if (poisonComp.poisonTicks <= 0) {
+            if (isShieldMode(stack)) {
+                // Preemptive shield: cancel if the target gets poisoned mid-charge
+                if (poisonComp.poisonTicks > 0) {
+                    user.stopUsingItem();
+                    clearTargetUuid(stack);
+                    return;
+                }
+            } else if (poisonComp.poisonTicks <= 0) {
                 user.stopUsingItem();
                 clearTargetUuid(stack);
                 return;
@@ -180,7 +198,7 @@ public class AntidoteItem extends Item {
         }
 
         PlayerEntity target = world.getPlayerByUuid(targetUuid);
-        if (target == null) {
+        if (target == null || !GameFunctions.isPlayerAliveAndSurvival(target)) {
             clearTargetUuid(stack);
             return stack;
         }
@@ -191,8 +209,23 @@ public class AntidoteItem extends Item {
             return stack;
         }
 
-        // Cure the poison
         PlayerPoisonComponent poisonComp = PlayerPoisonComponent.KEY.get(target);
+
+        if (isShieldMode(stack)) {
+            // Preemptive shield: only valid if the target is still unpoisoned
+            if (poisonComp.poisonTicks <= 0) {
+                AntidoteShieldPlayerComponent shieldComp = AntidoteShieldPlayerComponent.KEY.get(target);
+                if (!shieldComp.hasShield()) {
+                    shieldComp.applyShield();
+                    // Silently grants protection - no sound for non-poisoned targets
+                    player.getItemCooldownManager().set(this, COOLDOWN_TICKS);
+                }
+            }
+            clearTargetUuid(stack);
+            return stack;
+        }
+
+        // Cure the poison
         if (poisonComp.poisonTicks > 0) {
             poisonComp.reset();
 
@@ -229,6 +262,15 @@ public class AntidoteItem extends Item {
     @Override
     public UseAction getUseAction(ItemStack stack) {
         return UseAction.SPEAR;
+    }
+
+    private boolean isShieldMode(ItemStack stack) {
+        NbtComponent customData = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (customData != null) {
+            NbtCompound nbt = customData.copyNbt();
+            return nbt.getBoolean(SHIELD_TAG);
+        }
+        return false;
     }
 
     private UUID getTargetUuid(ItemStack stack) {

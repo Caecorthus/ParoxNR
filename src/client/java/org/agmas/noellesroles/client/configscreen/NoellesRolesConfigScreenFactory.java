@@ -43,28 +43,28 @@ public final class NoellesRolesConfigScreenFactory {
                                         (state, value) -> state.chatHistoryLimit(value)
                                 ),
                                 ConfigOptionDefinition.toggle(
-                                        "wathe_show_match_player_count",
-                                        Text.translatable("config_screen.option.wathe_show_match_player_count"),
-                                        Text.translatable("config_screen.option.wathe_show_match_player_count.description"),
-                                        ConfigScreenState::showMatchPlayerCount,
-                                        ConfigScreenState::showMatchPlayerCount,
-                                        (state, value) -> state.showMatchPlayerCount(value)
+                                        "collapse_top_right_hints",
+                                        Text.translatable("config_screen.option.collapse_top_right_hints"),
+                                        Text.translatable("config_screen.option.collapse_top_right_hints.description"),
+                                        state -> state.noellesRolesConfig().collapseTopRightHints,
+                                        state -> state.noellesRolesConfig().collapseTopRightHints,
+                                        (state, value) -> state.noellesRolesConfig().collapseTopRightHints = value
                                 ),
                                 ConfigOptionDefinition.toggle(
-                                        "show_assist_interface_hint",
-                                        Text.translatable("config_screen.option.show_assist_interface_hint"),
-                                        Text.translatable("config_screen.option.show_assist_interface_hint.description"),
-                                        state -> state.noellesRolesConfig().showAssistInterfaceHint,
-                                        state -> state.noellesRolesConfig().showAssistInterfaceHint,
-                                        (state, value) -> state.noellesRolesConfig().showAssistInterfaceHint = value
+                                        "bottom_right_hint_outline",
+                                        Text.translatable("config_screen.option.bottom_right_hint_outline"),
+                                        Text.translatable("config_screen.option.bottom_right_hint_outline.description"),
+                                        state -> state.noellesRolesConfig().bottomRightHintOutline,
+                                        state -> state.noellesRolesConfig().bottomRightHintOutline,
+                                        (state, value) -> state.noellesRolesConfig().bottomRightHintOutline = value
                                 ),
                                 ConfigOptionDefinition.toggle(
-                                        "show_config_screen_hint",
-                                        Text.translatable("config_screen.option.show_config_screen_hint"),
-                                        Text.translatable("config_screen.option.show_config_screen_hint.description"),
-                                        state -> state.noellesRolesConfig().showConfigScreenHint,
-                                        state -> state.noellesRolesConfig().showConfigScreenHint,
-                                        (state, value) -> state.noellesRolesConfig().showConfigScreenHint = value
+                                        "legacy_gui_style",
+                                        Text.translatable("config_screen.option.legacy_gui_style"),
+                                        Text.translatable("config_screen.option.legacy_gui_style.description"),
+                                        state -> state.noellesRolesConfig().legacyGuiStyle,
+                                        state -> state.noellesRolesConfig().legacyGuiStyle,
+                                        (state, value) -> state.noellesRolesConfig().legacyGuiStyle = value
                                 )
                         )
                 ),
@@ -91,6 +91,33 @@ public final class NoellesRolesConfigScreenFactory {
                                         state -> state.noellesRolesConfig().generalCooldownTicks,
                                         (state, value) -> state.noellesRolesConfig().generalCooldownTicks = value
                                 ),
+                                ConfigOptionDefinition.numberInput(
+                                        "match_length_seconds",
+                                        Text.translatable("config_screen.option.match_length_seconds"),
+                                        Text.translatable("config_screen.option.match_length_seconds.description"),
+                                        6,
+                                        state -> state.noellesRolesConfig().matchLengthSeconds,
+                                        state -> state.noellesRolesConfig().matchLengthSeconds,
+                                        (state, value) -> state.noellesRolesConfig().matchLengthSeconds = value
+                                ),
+                                ConfigOptionDefinition.number(
+                                        "white_knight_chance_percent",
+                                        Text.translatable("config_screen.option.white_knight_chance_percent"),
+                                        Text.translatable("config_screen.option.white_knight_chance_percent.description"),
+                                        0,
+                                        100,
+                                        state -> state.noellesRolesConfig().whiteKnightChancePercent,
+                                        state -> state.noellesRolesConfig().whiteKnightChancePercent,
+                                        (state, value) -> state.noellesRolesConfig().whiteKnightChancePercent = value
+                                ),
+                                ConfigOptionDefinition.toggle(
+                                        "mis_kill_gun_cooldown",
+                                        Text.translatable("config_screen.option.mis_kill_gun_cooldown"),
+                                        Text.translatable("config_screen.option.mis_kill_gun_cooldown.description"),
+                                        state -> state.noellesRolesConfig().misKillGunCooldown,
+                                        state -> state.noellesRolesConfig().misKillGunCooldown,
+                                        (state, value) -> state.noellesRolesConfig().misKillGunCooldown = value
+                                ),
                                 ConfigOptionDefinition.toggle(
                                         "voodoo_non_killer_deaths",
                                         Text.translatable("config_screen.option.voodoo_non_killer_deaths"),
@@ -114,6 +141,22 @@ public final class NoellesRolesConfigScreenFactory {
                                         state -> state.noellesRolesConfig().showHallucinationHud,
                                         state -> state.noellesRolesConfig().showHallucinationHud,
                                         (state, value) -> state.noellesRolesConfig().showHallucinationHud = value
+                                ),
+                                ConfigOptionDefinition.toggle(
+                                        "skip_mode_voting",
+                                        Text.translatable("config_screen.option.skip_mode_voting"),
+                                        Text.translatable("config_screen.option.skip_mode_voting.description"),
+                                        state -> state.noellesRolesConfig().skipModeVoting,
+                                        state -> state.noellesRolesConfig().skipModeVoting,
+                                        (state, value) -> state.noellesRolesConfig().skipModeVoting = value
+                                ),
+                                ConfigOptionDefinition.toggle(
+                                        "skip_map_voting",
+                                        Text.translatable("config_screen.option.skip_map_voting"),
+                                        Text.translatable("config_screen.option.skip_map_voting.description"),
+                                        state -> state.noellesRolesConfig().skipMapVoting,
+                                        state -> state.noellesRolesConfig().skipMapVoting,
+                                        (state, value) -> state.noellesRolesConfig().skipMapVoting = value
                                 )
                         )
                 ),

@@ -12,7 +12,7 @@ public class TequilaItem extends IngredientItem {
 
     @Override
     public void applyEffect(ServerPlayerEntity player, EffectContext context) {
-        player.addStatusEffect(new StatusEffectInstance(ModEffects.NO_COLLISION, context.scaleDuration(7 * 20), 0, false, false, true));
+        player.addStatusEffect(new StatusEffectInstance(ModEffects.NO_COLLISION, context.scaleDuration(10 * 20), 0, false, false, true));
         addMoodBonus(player, 0.2f, context);
     }
 

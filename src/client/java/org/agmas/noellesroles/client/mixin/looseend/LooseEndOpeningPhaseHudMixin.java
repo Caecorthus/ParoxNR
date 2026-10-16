@@ -43,7 +43,7 @@ public abstract class LooseEndOpeningPhaseHudMixin {
         HudRenderHelper.pushAboveVoiceChatHudLayer(context);
         try {
             int drawY = context.getScaledWindowHeight() - 2 - getTextRenderer().getWrappedLinesHeight(line, 999999);
-            context.drawTextWithShadow(getTextRenderer(), line, context.getScaledWindowWidth() - getTextRenderer().getWidth(line), drawY, dev.doctor4t.wathe.api.WatheRoles.LOOSE_END.color());
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), line, 0, drawY, dev.doctor4t.wathe.api.WatheRoles.LOOSE_END.color());
         } finally {
             HudRenderHelper.popAboveVoiceChatHudLayer(context);
         }

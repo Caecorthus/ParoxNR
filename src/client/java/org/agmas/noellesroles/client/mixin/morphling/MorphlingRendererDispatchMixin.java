@@ -9,7 +9,7 @@ import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import org.agmas.noellesroles.client.hallucination.ClientHallucinationVisualHelper;
+import org.agmas.noellesroles.client.morphling.ClientMorphlingScrambleHelper;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -35,7 +35,7 @@ public class MorphlingRendererDispatchMixin {
         }
 
         SkinTextures.Model targetModel = null;
-        PlayerListEntry shuffledEntry = ClientHallucinationVisualHelper.getShuffledEntry(player);
+        PlayerListEntry shuffledEntry = ClientMorphlingScrambleHelper.getScrambledEntry(player);
         if (shuffledEntry != null) {
             targetModel = shuffledEntry.getSkinTextures().model();
         }

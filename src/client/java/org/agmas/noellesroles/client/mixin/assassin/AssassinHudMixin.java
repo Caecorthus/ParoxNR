@@ -10,6 +10,7 @@ import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.text.Text;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.gui.HallucinationHudRenderer;
+import org.agmas.noellesroles.client.util.HudRenderHelper;
 import org.agmas.noellesroles.assassin.AssassinPlayerComponent;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.spongepowered.asm.mixin.Mixin;
@@ -35,7 +36,6 @@ public abstract class AssassinHudMixin {
 
         AssassinPlayerComponent assassinComp = AssassinPlayerComponent.KEY.get(MinecraftClient.getInstance().player);
 
-        int screenWidth = context.getScaledWindowWidth();
         int screenHeight = context.getScaledWindowHeight();
         int drawY = screenHeight - 5; // 从底部开始，留5像素边距
 
@@ -46,8 +46,8 @@ public abstract class AssassinHudMixin {
         drawY -= getTextRenderer().getWrappedLinesHeight(guessesText, 999999);
 
         int guessesColor = assassinComp.getGuessesRemaining() > 0 ? 0xAA00FF00 : 0xAAFF0000; // 半透明绿色/红色
-        context.drawTextWithShadow(getTextRenderer(), guessesText,
-            screenWidth - getTextRenderer().getWidth(guessesText) - 5, drawY, guessesColor);
+        HudRenderHelper.drawRightAligned(context, getTextRenderer(), guessesText,
+            HudRenderHelper.ASSASSIN_BOTTOM_PADDING, drawY, guessesColor);
 
         // 显示冷却时间（右下角）
         if (assassinComp.getCooldownTicks() > 0) {
@@ -56,8 +56,8 @@ public abstract class AssassinHudMixin {
 
             drawY -= getTextRenderer().getWrappedLinesHeight(cooldownText, 999999) + 2;
 
-            context.drawTextWithShadow(getTextRenderer(), cooldownText,
-                screenWidth - getTextRenderer().getWidth(cooldownText) - 5, drawY, 0xAAFFFF00); // 半透明黄色
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), cooldownText,
+                HudRenderHelper.ASSASSIN_BOTTOM_PADDING, drawY, 0xAAFFFF00); // 半透明黄色
         }
 
         // 显示按键提示（右下角，可用时）
@@ -75,8 +75,8 @@ public abstract class AssassinHudMixin {
             int green = 200;
             int color = (alpha << 24) | (red << 16) | (green << 8);
 
-            context.drawTextWithShadow(getTextRenderer(), hintText,
-                screenWidth - getTextRenderer().getWidth(hintText) - 5, drawY, color);
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), hintText,
+                HudRenderHelper.ASSASSIN_BOTTOM_PADDING, drawY, color);
         }
 
         // 显示状态提示（右下角，不可用时）
@@ -96,8 +96,8 @@ public abstract class AssassinHudMixin {
 
             drawY -= getTextRenderer().getWrappedLinesHeight(statusText, 999999) + 2;
 
-            context.drawTextWithShadow(getTextRenderer(), statusText,
-                screenWidth - getTextRenderer().getWidth(statusText) - 5, drawY, statusColor);
+            HudRenderHelper.drawRightAligned(context, getTextRenderer(), statusText,
+                HudRenderHelper.ASSASSIN_BOTTOM_PADDING, drawY, statusColor);
         }
     }
 }

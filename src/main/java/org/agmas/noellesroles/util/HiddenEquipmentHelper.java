@@ -3,6 +3,7 @@ package org.agmas.noellesroles.util;
 import com.mojang.datafixers.util.Pair;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.game.GameFunctions;
+import dev.doctor4t.wathe.index.WatheItems;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -14,6 +15,7 @@ import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.bomber.BomberPlayerComponent;
 import org.agmas.noellesroles.looseend.LooseEndPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,16 +28,27 @@ public final class HiddenEquipmentHelper {
     private HiddenEquipmentHelper() {}
 
     /**
-     * 检查物品是否应该被隐藏
+     * 检查物品是否应该被隐藏（没有观察者上下文时，按“对所有人隐藏”处理）
      */
     public static boolean shouldHideItem(ItemStack stack, PlayerEntity holder) {
+        return shouldHideItem(stack, holder, null);
+    }
+
+    /**
+     * 检查物品是否应该对指定观察者隐藏
+     *
+     * @param observer 实际看着这件装备的玩家；传 null 表示没有观察者上下文
+     */
+    public static boolean shouldHideItem(ItemStack stack, PlayerEntity holder, @Nullable PlayerEntity observer) {
         if (stack.isEmpty()) return false;
 
-        if (stack.isOf(ModItems.DEFENSE_VIAL)) return true;
         if (stack.isOf(ModItems.NEUTRAL_MASTER_KEY)) return true;
         if (stack.isOf(ModItems.ANTIDOTE)) return true;
         if (stack.isOf(ModItems.HALLUCINATION_MEDICINE)) return true;
         if (stack.isOf(ModItems.IRON_MAN_VIAL)) return true;
+        if (stack.isOf(ModItems.VOODOO_DOLL)) return true;
+        if (stack.isOf(ModItems.ATTENDANT_REGISTER)) return true;
+        if (stack.isOf(WatheItems.WALKIE_TALKIE)) return true;
         if (stack.isOf(Items.WRITTEN_BOOK)) return true;
 
         if (stack.isOf(ModItems.TIMED_BOMB)) {
@@ -49,18 +62,27 @@ public final class HiddenEquipmentHelper {
         if (stack.isOf(ModItems.VODKA)) return true;
         if (stack.isOf(ModItems.TEQUILA)) return true;
         if (stack.isOf(ModItems.WHISKEY)) return true;
+        if (stack.isOf(ModItems.BRANDY)) return true;
         if (stack.isOf(ModItems.ICE_CUBE)) return true;
         if (stack.isOf(ModItems.LIQUEUR)) return true;
         if (stack.isOf(ModItems.SPECIAL_SPICE)) return true;
         if (stack.isOf(ModItems.REPAIR_TOOL)) return true;
 
-        // 基酒瓶 — 酒保手中隐藏，其他角色手中可见
+        // 基酒 / 调好的酒 — 只有酒保能看见别人手里的酒，其他玩家一律看不见
         if (stack.isOf(ModItems.BASE_SPIRIT)) {
-            GameWorldComponent gameWorld = GameWorldComponent.KEY.get(holder.getWorld());
-            return gameWorld.isRole(holder, Noellesroles.BARTENDER);
+            return !isBartender(observer);
         }
 
         return false;
+    }
+
+    /**
+     * 判断某个玩家当前是否是酒保
+     */
+    private static boolean isBartender(@Nullable PlayerEntity player) {
+        if (player == null || player.getWorld() == null) return false;
+        GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
+        return gameWorld.isRole(player, Noellesroles.BARTENDER);
     }
 
     /**
@@ -92,7 +114,7 @@ public final class HiddenEquipmentHelper {
             if ((slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND)
                     && (SwallowedPlayerComponent.isPlayerSwallowed(holder)
                     || LooseEndPlayerComponent.KEY.get(holder).isOpeningPhased()
-                    || shouldHideItem(stack, holder))) {
+                    || shouldHideItem(stack, holder, observer))) {
                 filtered.add(Pair.of(slot, ItemStack.EMPTY));
                 modified = true;
             } else {

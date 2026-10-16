@@ -27,8 +27,17 @@ public class NoellesRolesConfig {
     @SerialEntry(comment = "Starting cooldown (in ticks)")
     public int generalCooldownTicks = GameConstants.getInTicks(0,30);
 
+    @SerialEntry(comment = "Match length in seconds, applied when a new match starts.")
+    public int matchLengthSeconds = 600;
+
+    @SerialEntry(comment = "Chance (percent) that the White Knight replaces one vigilante slot in a match.")
+    public int whiteKnightChancePercent = 50;
+
     @SerialEntry(comment = "Allow Natural deaths to trigger voodoo (deaths without an assigned killer)")
     public boolean voodooNonKillerDeaths = false;
+
+    @SerialEntry(comment = "Whether the gun dropped by a player who died from the innocent-shooting punishment picks up with a 15s cooldown")
+    public boolean misKillGunCooldown = true;
 
     @SerialEntry(comment = "Show the fog radius HUD for the Fog of War event")
     public boolean showFogRadiusHud = false;
@@ -36,11 +45,14 @@ public class NoellesRolesConfig {
     @SerialEntry(comment = "Show the hallucination HUD for the Fog of War event")
     public boolean showHallucinationHud = false;
 
-    @SerialEntry(comment = "Show the bottom-left assist interface hint overlay")
-    public boolean showAssistInterfaceHint = true;
+    @SerialEntry(comment = "Collapse the top-right info hints to a single config screen hint line")
+    public boolean collapseTopRightHints = false;
 
-    @SerialEntry(comment = "Show the bottom-left config screen hint overlay")
-    public boolean showConfigScreenHint = true;
+    @SerialEntry(comment = "Draw the bottom-right skill and task point hint text with an outline")
+    public boolean bottomRightHintOutline = false;
+
+    @SerialEntry(comment = "Use the legacy flat GUI style for the role info and dual role screens, and hide the inventory role card")
+    public boolean legacyGuiStyle = false;
 
     @SerialEntry(comment = "Custom label shown in the handmade config screen example")
     public String preferredServerLabel = "NoellesRoles";
@@ -53,6 +65,12 @@ public class NoellesRolesConfig {
 
     @SerialEntry(comment = "World dimension id used by Death Arena. If blank, the dimension from deathArenaMapId will be used.")
     public String deathArenaDimensionId = "wathe:yangguan_siwang";
+
+    @SerialEntry(comment = "Skip mode voting after a match and keep the previous game mode")
+    public boolean skipModeVoting = false;
+
+    @SerialEntry(comment = "Skip map voting and the map roulette after a match and keep the previous map")
+    public boolean skipMapVoting = false;
 
     @SerialEntry(comment = "Lock Sound Physics Remastered config to the server-defined values while connected")
     public boolean lockSoundPhysicsRemasteredConfig = true;
@@ -126,15 +144,21 @@ public class NoellesRolesConfig {
     public void copyFrom(NoellesRolesConfig other) {
         this.insanePlayersSeeMorphs = other.insanePlayersSeeMorphs;
         this.generalCooldownTicks = other.generalCooldownTicks;
+        this.matchLengthSeconds = other.matchLengthSeconds;
+        this.whiteKnightChancePercent = other.whiteKnightChancePercent;
         this.voodooNonKillerDeaths = other.voodooNonKillerDeaths;
+        this.misKillGunCooldown = other.misKillGunCooldown;
         this.showFogRadiusHud = other.showFogRadiusHud;
         this.showHallucinationHud = other.showHallucinationHud;
-        this.showAssistInterfaceHint = other.showAssistInterfaceHint;
-        this.showConfigScreenHint = other.showConfigScreenHint;
+        this.collapseTopRightHints = other.collapseTopRightHints;
+        this.bottomRightHintOutline = other.bottomRightHintOutline;
+        this.legacyGuiStyle = other.legacyGuiStyle;
         this.preferredServerLabel = other.preferredServerLabel;
         this.uiThemePreset = other.uiThemePreset;
         this.deathArenaMapId = other.deathArenaMapId;
         this.deathArenaDimensionId = other.deathArenaDimensionId;
+        this.skipModeVoting = other.skipModeVoting;
+        this.skipMapVoting = other.skipMapVoting;
         this.lockSoundPhysicsRemasteredConfig = other.lockSoundPhysicsRemasteredConfig;
         this.soundPhysicsRemasteredLockedValues = new LinkedHashMap<>(other.soundPhysicsRemasteredLockedValues);
         this.lockTalkBubblesConfig = other.lockTalkBubblesConfig;

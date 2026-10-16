@@ -9,15 +9,10 @@ import org.agmas.noellesroles.Noellesroles;
 
 import java.util.UUID;
 
-public record AssassinGuessRoleC2SPacket(UUID targetPlayer, Identifier guessedRole) implements CustomPayload {
+public record AssassinGuessRoleC2SPacket(UUID targetPlayer, Identifier guessedRole, boolean fromBook) implements CustomPayload {
     public static final Identifier PACKET_ID = Identifier.of(Noellesroles.MOD_ID, "assassin_guess_role");
     public static final Id<AssassinGuessRoleC2SPacket> ID = new Id<>(PACKET_ID);
     public static final PacketCodec<RegistryByteBuf, AssassinGuessRoleC2SPacket> CODEC;
-
-    public AssassinGuessRoleC2SPacket(UUID targetPlayer, Identifier guessedRole) {
-        this.targetPlayer = targetPlayer;
-        this.guessedRole = guessedRole;
-    }
 
     @Override
     public Id<? extends CustomPayload> getId() {
@@ -27,10 +22,11 @@ public record AssassinGuessRoleC2SPacket(UUID targetPlayer, Identifier guessedRo
     public void write(PacketByteBuf buf) {
         buf.writeUuid(this.targetPlayer);
         buf.writeIdentifier(this.guessedRole);
+        buf.writeBoolean(this.fromBook);
     }
 
     public static AssassinGuessRoleC2SPacket read(PacketByteBuf buf) {
-        return new AssassinGuessRoleC2SPacket(buf.readUuid(), buf.readIdentifier());
+        return new AssassinGuessRoleC2SPacket(buf.readUuid(), buf.readIdentifier(), buf.readBoolean());
     }
 
     public UUID targetPlayer() {

@@ -29,7 +29,7 @@ public class FerrymanPlayerComponent implements AutoSyncedComponent, ServerTicki
     );
 
     private static final int MAX_FERRIED_BODIES_SYNC = 1024;
-    public static final int REACTION_WINDOW_TICKS = 8;
+    public static final int REACTION_WINDOW_TICKS = 10;
     public static final int REACTION_COOLDOWN_TICKS = GameConstants.getInTicks(0, 10);
     public static final int EMPTY_PENALTY_TICKS = GameConstants.getInTicks(0, 3);
     public static final int FERRY_COOLDOWN_TICKS = GameConstants.getInTicks(0, 3);

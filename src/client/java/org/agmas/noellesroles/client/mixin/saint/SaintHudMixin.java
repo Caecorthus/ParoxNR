@@ -31,10 +31,7 @@ public abstract class SaintHudMixin {
         int drawY = skillHudTopY < context.getScaledWindowHeight()
                 ? skillHudTopY - lineHeight - 2
                 : context.getScaledWindowHeight() - lineHeight;
-        int drawX = context.getScaledWindowWidth()
-                - getTextRenderer().getWidth(line)
-                - HudRenderHelper.getBottomRightSkillHudRightPadding(player);
-
-        context.drawTextWithShadow(getTextRenderer(), line, drawX, drawY, Noellesroles.SAINT.color());
+        HudRenderHelper.drawRightAligned(context, getTextRenderer(), line,
+                HudRenderHelper.getBottomRightSkillHudRightPadding(player), drawY, Noellesroles.SAINT.color());
     }
 }

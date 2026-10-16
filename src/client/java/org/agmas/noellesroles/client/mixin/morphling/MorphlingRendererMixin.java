@@ -10,7 +10,7 @@ import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.util.Identifier;
-import org.agmas.noellesroles.client.hallucination.ClientHallucinationVisualHelper;
+import org.agmas.noellesroles.client.morphling.ClientMorphlingScrambleHelper;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,7 +24,7 @@ public abstract class MorphlingRendererMixin {
 
     @Inject(method = "getTexture(Lnet/minecraft/client/network/AbstractClientPlayerEntity;)Lnet/minecraft/util/Identifier;", at = @At("HEAD"), cancellable = true)
     void noellesroles$swapTexture(AbstractClientPlayerEntity player, CallbackInfoReturnable<Identifier> cir) {
-        PlayerListEntry shuffledEntry = ClientHallucinationVisualHelper.getShuffledEntry(player);
+        PlayerListEntry shuffledEntry = ClientMorphlingScrambleHelper.getScrambledEntry(player);
         if (shuffledEntry != null) {
             cir.setReturnValue(shuffledEntry.getSkinTextures().texture());
             cir.cancel();
@@ -63,7 +63,7 @@ public abstract class MorphlingRendererMixin {
 
     @WrapOperation(method = "renderArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getSkinTextures()Lnet/minecraft/client/util/SkinTextures;"))
     SkinTextures noellesroles$swapArmTexture(AbstractClientPlayerEntity instance, Operation<SkinTextures> original) {
-        SkinTextures shuffledTextures = ClientHallucinationVisualHelper.getShuffledSkinTextures(instance);
+        SkinTextures shuffledTextures = ClientMorphlingScrambleHelper.getScrambledSkinTextures(instance);
         if (shuffledTextures != null) {
             return shuffledTextures;
         }

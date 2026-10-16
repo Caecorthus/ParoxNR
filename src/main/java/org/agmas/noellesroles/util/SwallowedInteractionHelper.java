@@ -14,7 +14,8 @@ public final class SwallowedInteractionHelper {
         DEFAULT,
         VOODOO_TARGET,
         ASSASSIN_GUESS_TARGET,
-        CRIMINAL_REASONER_SUSPECT
+        CRIMINAL_REASONER_SUSPECT,
+        PHONISM_TARGET
     }
 
     private SwallowedInteractionHelper() {}
@@ -58,7 +59,7 @@ public final class SwallowedInteractionHelper {
     private static boolean isWhitelisted(TargetingRule rule) {
         return switch (rule) {
             case DEFAULT -> false;
-            case VOODOO_TARGET, ASSASSIN_GUESS_TARGET, CRIMINAL_REASONER_SUSPECT -> true;
+            case VOODOO_TARGET, ASSASSIN_GUESS_TARGET, CRIMINAL_REASONER_SUSPECT, PHONISM_TARGET -> true;
         };
     }
 

@@ -33,7 +33,7 @@ import java.util.List;
 
 public class DoubleBarrelShotgunItem extends Item {
     public static final int MAX_SHELLS = 2;
-    public static final int FIRE_COOLDOWN_TICKS = 4;
+    public static final int FIRE_COOLDOWN_TICKS = 20;
     public static final int EMPTY_COOLDOWN_TICKS = 20 * 30;
     public static final int RELOAD_WINDOW_TICKS = 20 * 10;
     public static final double RANGE = 8.0;
@@ -188,6 +188,7 @@ public class DoubleBarrelShotgunItem extends Item {
         tooltip.add(Text.translatable("item.noellesroles.double_barrel_shotgun.tooltip.line3").formatted(Formatting.GRAY));
         tooltip.add(Text.translatable("item.noellesroles.double_barrel_shotgun.tooltip.line4").formatted(Formatting.GRAY));
         tooltip.add(Text.translatable("item.noellesroles.double_barrel_shotgun.tooltip.line5").formatted(Formatting.GRAY));
+        tooltip.add(Text.translatable("item.noellesroles.double_barrel_shotgun.tooltip.line6").formatted(Formatting.GRAY));
         super.appendTooltip(stack, context, tooltip, type);
     }
 

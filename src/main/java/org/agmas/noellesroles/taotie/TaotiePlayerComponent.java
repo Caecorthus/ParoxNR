@@ -24,9 +24,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.pathogen.InfectedPlayerComponent;
-import org.agmas.noellesroles.bodyguard.BodyguardPlayerComponent;
 import org.agmas.noellesroles.professor.IronManPlayerComponent;
-import org.agmas.noellesroles.serialkiller.SerialKillerPlayerComponent;
 import dev.doctor4t.wathe.index.WatheSounds;
 import net.minecraft.sound.SoundCategory;
 import org.jetbrains.annotations.NotNull;
@@ -50,17 +48,34 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
     private static final Identifier EVENT_MOMENT_END = Identifier.of(Noellesroles.MOD_ID, "taotie_moment_end");
 
     // Constants
-    public static final int SWALLOW_COOLDOWN = GameConstants.getInTicks(0, 45); // 45 seconds
+    public static final int SWALLOW_COOLDOWN_TICKS = GameConstants.getInTicks(0, 40); // 开局后每次吞噬固定 40 秒
     public static final int SWALLOW_DISTANCE_SQUARED = 9; // 3 blocks squared
     public static final int TAOTIE_MOMENT_DURATION = GameConstants.getInTicks(2, 0); // 2 minutes
+    public static final int GAME_START_HUNGER_GRACE_TICKS = GameConstants.getInTicks(0, 45); // 开局 45 秒不流失饥饿
+    public static final int SWALLOW_HUNGER_GRACE_TICKS = GameConstants.getInTicks(0, 10); // 吞噬后 10 秒不流失饥饿
+
+    // 饥饿值：开局 100%，3 分钟内线性流失至 0%，归零即饿死
+    public static final float HUNGER_MAX = 100.0F;
+    private static final float HUNGER_DRAIN_PER_TICK = HUNGER_MAX / GameConstants.getInTicks(3, 0);
+    private static final float HUNGER_GAIN_ON_SWALLOW = HUNGER_MAX / 6F;
+    private static final float HUNGER_GAIN_ON_DIGEST = HUNGER_MAX / 3F;
+    // 饥饿提示阈值（同时也是 HUD 文字变色阈值）
+    public static final float HUNGER_PECKISH_THRESHOLD = 66F;
+    public static final float HUNGER_STARVING_THRESHOLD = 33F;
 
     private final PlayerEntity player;
 
     // Swallowed players list
     private final List<UUID> swallowedPlayers = new ArrayList<>();
 
-    // Client-side swallowed count (used for display only, not actual UUIDs)
-    private int swallowedCountForClient = 0;
+    // 饥饿值（0-100）
+    private float hunger = HUNGER_MAX;
+
+    // 饥饿冻结剩余时间（ticks）：开局与每次吞噬后短暂不流失
+    private int hungerFreezeTicks = 0;
+
+    // 累计吞噬过的人数（用于玩家指示器解锁阈值）
+    private int totalSwallowedCount = 0;
 
     // Cooldown for swallowing (ticks)
     private int swallowCooldown = 0;
@@ -73,9 +88,6 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
     // Total player count at game start (for win condition)
     private int totalPlayersAtStart = 0;
 
-    // 计算后的吞噬冷却时间（根据玩家数量动态调整）
-    private int calculatedSwallowCooldown = SWALLOW_COOLDOWN;
-
     public TaotiePlayerComponent(PlayerEntity player) {
         this.player = player;
     }
@@ -87,13 +99,14 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
         }
 
         this.swallowedPlayers.clear();
-        this.swallowedCountForClient = 0;
+        this.hunger = HUNGER_MAX;
+        this.hungerFreezeTicks = 0;
+        this.totalSwallowedCount = 0;
         this.swallowCooldown = 0;
         this.taotieMomentActive = false;
         this.taotieMomentTicks = 0;
         this.triggerThreshold = 0;
         this.totalPlayersAtStart = 0;
-        this.calculatedSwallowCooldown = SWALLOW_COOLDOWN;
 
         // Clean up voice chat group
         NoellesrolesVoiceChatPlugin.clearStomachGroup(player.getUuid());
@@ -113,19 +126,21 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
     @Override
     public void writeSyncPacket(RegistryByteBuf buf, ServerPlayerEntity recipient) {
         buf.writeInt(this.swallowCooldown);
-        buf.writeInt(this.swallowedPlayers.size());
+        buf.writeFloat(this.hunger);
         buf.writeBoolean(this.taotieMomentActive);
         buf.writeInt(this.taotieMomentTicks);
         buf.writeInt(this.totalPlayersAtStart);
+        buf.writeInt(this.totalSwallowedCount);
     }
 
     @Override
     public void applySyncPacket(RegistryByteBuf buf) {
         this.swallowCooldown = buf.readInt();
-        this.swallowedCountForClient = buf.readInt();
+        this.hunger = buf.readFloat();
         this.taotieMomentActive = buf.readBoolean();
         this.taotieMomentTicks = buf.readInt();
         this.totalPlayersAtStart = buf.readInt();
+        this.totalSwallowedCount = buf.readInt();
     }
 
     /**
@@ -136,17 +151,55 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
         // Trigger threshold = totalPlayers / 5 (minimum 2)
         this.triggerThreshold = Math.max(2, totalPlayers / 5);
 
-        // 计算动态冷却（线性）: 在10-40人之间线性插值，10人=50秒，40人=20秒
-        // 公式: cooldown = 50 - (playerCount - 10) * (50 - 20) / (40 - 10) = 50 - (playerCount - 10)
-        // 简化: cooldown = 60 - playerCount, 限制在20-50秒之间
-        int cooldownSeconds = Math.max(20, Math.min(50, 60 - totalPlayers));
-        this.calculatedSwallowCooldown = GameConstants.getInTicks(0, cooldownSeconds);
-
         this.swallowCooldown = 0;
+        this.hungerFreezeTicks = GAME_START_HUNGER_GRACE_TICKS;
+        this.totalSwallowedCount = 0;
         this.taotieMomentActive = false;
         this.taotieMomentTicks = 0;
         this.swallowedPlayers.clear();
+        this.hunger = HUNGER_MAX;
         this.sync();
+    }
+
+    /**
+     * 增减饥饿值，并在跨越阈值时给出 action bar 提示
+     */
+    private void addHunger(float amount) {
+        float previous = this.hunger;
+        this.hunger = Math.max(0.0F, Math.min(HUNGER_MAX, this.hunger + amount));
+        checkHungerThresholds(previous);
+    }
+
+    private void checkHungerThresholds(float previous) {
+        if (previous < HUNGER_MAX && this.hunger >= HUNGER_MAX) {
+            sendHungerMessage("tip.taotie.hunger.satisfied");
+        }
+        if (previous > HUNGER_PECKISH_THRESHOLD && this.hunger <= HUNGER_PECKISH_THRESHOLD) {
+            sendHungerMessage("tip.taotie.hunger.peckish");
+        }
+        if (previous > HUNGER_STARVING_THRESHOLD && this.hunger <= HUNGER_STARVING_THRESHOLD) {
+            sendHungerMessage("tip.taotie.hunger.starving");
+        }
+    }
+
+    private void sendHungerMessage(String key) {
+        if (player instanceof ServerPlayerEntity serverPlayer) {
+            serverPlayer.sendMessage(Text.translatable(key), true);
+        }
+    }
+
+    private void tickHunger(ServerPlayerEntity taotie) {
+        addHunger(-HUNGER_DRAIN_PER_TICK);
+        if (this.hunger <= 0.0F) {
+            GameFunctions.killPlayer(taotie, true, null, Noellesroles.DEATH_REASON_STARVED, true);
+        }
+    }
+
+    /**
+     * 被吞者被消化死亡时回补饥饿值（由死亡回调调用）
+     */
+    public void addDigestReward() {
+        addHunger(HUNGER_GAIN_ON_DIGEST);
     }
 
     /**
@@ -182,7 +235,7 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
                 .target(taotie)
                 .put("action", "block_swallow")
                 .record();
-            swallowCooldown = calculatedSwallowCooldown; // 正常冷却时间
+            swallowCooldown = SWALLOW_COOLDOWN_TICKS;
             this.sync();
             return false;
         }
@@ -197,27 +250,9 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
                 .target(taotie)
                 .put("action", "block_swallow")
                 .record();
-            swallowCooldown = calculatedSwallowCooldown;
+            swallowCooldown = SWALLOW_COOLDOWN_TICKS;
             this.sync();
             return false;
-        }
-
-        // 保镖保护检查：如果目标是保镖的保护对象且保镖在3格内，保镖牺牲自己保护目标
-        if (target.getWorld() instanceof ServerWorld bodyguardWorld) {
-            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(bodyguardWorld);
-            for (UUID bodyguardUuid : gameWorldComponent.getAllWithRole(Noellesroles.BODYGUARD)) {
-                PlayerEntity bodyguardPlayer = bodyguardWorld.getPlayerByUuid(bodyguardUuid);
-                if (bodyguardPlayer != null && GameFunctions.isPlayerPlayingAndAlive(bodyguardPlayer) && !SwallowedPlayerComponent.isPlayerSwallowed(bodyguardPlayer)) {
-                    BodyguardPlayerComponent bodyguardComp = BodyguardPlayerComponent.KEY.get(bodyguardPlayer);
-                    if (bodyguardComp.isCurrentTarget(target.getUuid()) && bodyguardPlayer.squaredDistanceTo(target) <= 9.0) {
-                        GameRecordManager.recordSkillUse((ServerPlayerEntity) bodyguardPlayer, Noellesroles.BODYGUARD_ID, target, null);
-                        GameFunctions.killPlayer((ServerPlayerEntity) bodyguardPlayer, true, taotie, Noellesroles.DEATH_REASON_BODYGUARD_SACRIFICE);
-                        swallowCooldown = calculatedSwallowCooldown;
-                        this.sync();
-                        return false;
-                    }
-                }
-            }
         }
 
         return performSwallow(taotie, target);
@@ -236,40 +271,22 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
 
         targetSwallowed.setSwallowed(taotie.getUuid());
         swallowedPlayers.add(target.getUuid());
+        totalSwallowedCount++;
+        addHunger(HUNGER_GAIN_ON_SWALLOW);
+        hungerFreezeTicks = SWALLOW_HUNGER_GRACE_TICKS;
         syncSwallowedPlayersToTaotie();
 
         // Set up voice chat group
         NoellesrolesVoiceChatPlugin.addToStomachGroup(taotie, target);
 
-        // Set cooldown (使用动态计算的冷却时间)
-        swallowCooldown = calculatedSwallowCooldown;
-
-        // 通知连环杀手目标被吞噬
-        if (target.getWorld() instanceof ServerWorld serverWorld) {
-            notifySerialKillersTargetSwallowed(target, serverWorld);
-        }
+        // Set cooldown (开局后固定 40 秒)
+        swallowCooldown = SWALLOW_COOLDOWN_TICKS;
 
         // 病原体感染传播：检查新被吞者或饕餮是否被感染，如果是则传播给肚子里所有人
         spreadInfectionOnSwallow(target);
 
         this.sync();
         return true;
-    }
-
-    /**
-     * Notify serial killers if their target was swallowed
-     */
-    private void notifySerialKillersTargetSwallowed(ServerPlayerEntity target, ServerWorld serverWorld) {
-        GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(serverWorld);
-        for (UUID uuid : gameWorldComponent.getAllWithRole(Noellesroles.SERIAL_KILLER)) {
-            PlayerEntity serialKiller = serverWorld.getPlayerByUuid(uuid);
-            if (serialKiller != null && GameFunctions.isPlayerPlayingAndAlive(serialKiller)) {
-                SerialKillerPlayerComponent serialKillerComp = SerialKillerPlayerComponent.KEY.get(serialKiller);
-                if (serialKillerComp.isCurrentTarget(target.getUuid())) {
-                    serialKillerComp.onTargetDeath(gameWorldComponent);
-                }
-            }
-        }
     }
 
     /**
@@ -426,6 +443,7 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
     private void triggerTaotieMoment() {
         this.taotieMomentActive = true;
         this.taotieMomentTicks = TAOTIE_MOMENT_DURATION;
+        addHunger(HUNGER_MAX); // 进入饕餮时刻回满饥饿值
 
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
         if (player instanceof ServerPlayerEntity serverPlayer) {
@@ -517,6 +535,24 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
             }
         }
 
+        // 饥饿值只对真正的饕餮生效（组件对所有玩家都存在，必须校验角色）
+        if (player instanceof ServerPlayerEntity taotie && player.getWorld() instanceof ServerWorld serverWorld
+                && GameWorldComponent.KEY.get(serverWorld).isRole(taotie, Noellesroles.TAOTIE)
+                && GameWorldComponent.KEY.get(serverWorld).getGameStatus() == GameWorldComponent.GameStatus.ACTIVE
+                && GameFunctions.isPlayerPlayingAndAlive(taotie)) {
+            if (hungerFreezeTicks > 0) {
+                hungerFreezeTicks--;
+            } else {
+                tickHunger(taotie);
+            }
+
+            // 每秒同步一次饥饿值，供 HUD 显示
+            if (player.age % 20 == 0) {
+                System.out.println("[TAOTIE-DEBUG] taotie tick hunger=" + this.hunger);
+                this.sync();
+            }
+        }
+
         // Handle Taotie Moment
         if (taotieMomentActive && taotieMomentTicks > 0) {
             taotieMomentTicks--;
@@ -570,9 +606,8 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
         this.sync();
     }
 
-    public int getSwallowedCount() {
-        // On client side, use synced count; on server side, use actual list size
-        return player.getWorld().isClient() ? swallowedCountForClient : swallowedPlayers.size();
+    public float getHunger() {
+        return hunger;
     }
 
     public List<UUID> getSwallowedPlayers() {
@@ -591,6 +626,10 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
         return totalPlayersAtStart;
     }
 
+    public int getTotalSwallowedCount() {
+        return totalSwallowedCount;
+    }
+
     @Override
     public void writeToNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         tag.putInt("swallowCooldown", this.swallowCooldown);
@@ -598,7 +637,9 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
         tag.putInt("taotieMomentTicks", this.taotieMomentTicks);
         tag.putInt("triggerThreshold", this.triggerThreshold);
         tag.putInt("totalPlayersAtStart", this.totalPlayersAtStart);
-        tag.putInt("calculatedSwallowCooldown", this.calculatedSwallowCooldown);
+        tag.putInt("totalSwallowedCount", this.totalSwallowedCount);
+        tag.putInt("hungerFreezeTicks", this.hungerFreezeTicks);
+        tag.putFloat("hunger", this.hunger);
 
         NbtList swallowedList = new NbtList();
         for (UUID uuid : this.swallowedPlayers) {
@@ -614,9 +655,10 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
         this.taotieMomentTicks = tag.getInt("taotieMomentTicks");
         this.triggerThreshold = tag.getInt("triggerThreshold");
         this.totalPlayersAtStart = tag.getInt("totalPlayersAtStart");
-        this.calculatedSwallowCooldown = tag.contains("calculatedSwallowCooldown")
-            ? tag.getInt("calculatedSwallowCooldown")
-            : SWALLOW_COOLDOWN;
+        this.totalSwallowedCount = tag.getInt("totalSwallowedCount");
+        this.hungerFreezeTicks = tag.getInt("hungerFreezeTicks");
+
+        this.hunger = tag.contains("hunger") ? tag.getFloat("hunger") : HUNGER_MAX;
 
         this.swallowedPlayers.clear();
         if (tag.contains("swallowedPlayers")) {
@@ -625,5 +667,6 @@ public class TaotiePlayerComponent implements AutoSyncedComponent, ServerTicking
                 this.swallowedPlayers.add(UUID.fromString(swallowedList.getString(i)));
             }
         }
+
     }
 }

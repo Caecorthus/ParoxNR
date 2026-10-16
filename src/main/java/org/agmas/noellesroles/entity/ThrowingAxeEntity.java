@@ -1,5 +1,7 @@
 package org.agmas.noellesroles.entity;
 
+import dev.doctor4t.wathe.cca.GameWorldComponent;
+import dev.doctor4t.wathe.cca.PlayerShopComponent;
 import dev.doctor4t.wathe.game.GameFunctions;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -42,6 +44,32 @@ public class ThrowingAxeEntity extends PersistentProjectileEntity {
     private int ticksAlive = 0;
     private boolean isStuck = false;
     private final Set<Integer> hitEntities = new HashSet<>();
+
+    /**
+     * 「一次投掷」内共享的击杀序号：普通投掷的飞斧自建一个，齐掷的多把飞斧共享同一个。
+     * 仅运行时使用，不持久化（读档后各自从头计数）。
+     */
+    public static final class AxeKillSequence {
+        private int kills = 0;
+
+        public int next() {
+            return ++this.kills;
+        }
+    }
+
+    @Nullable
+    private AxeKillSequence killSequence;
+
+    public void setKillSequence(@Nullable AxeKillSequence killSequence) {
+        this.killSequence = killSequence;
+    }
+
+    private AxeKillSequence killSequence() {
+        if (this.killSequence == null) {
+            this.killSequence = new AxeKillSequence();
+        }
+        return this.killSequence;
+    }
 
     public ThrowingAxeEntity(EntityType<? extends ThrowingAxeEntity> entityType, World world) {
         super(entityType, world);
@@ -174,6 +202,21 @@ public class ThrowingAxeEntity extends PersistentProjectileEntity {
         // Instant kill using game's kill function
         ServerPlayerEntity killerPlayer = (owner instanceof ServerPlayerEntity sp) ? sp : null;
         GameFunctions.killPlayer(target, true, killerPlayer, Noellesroles.DEATH_REASON_THROWING_AXE);
+
+        // 强盗多杀递减：同一次投掷的第 2 个击杀 -25、第 3 个及以后 -50（基础 100 由 killPlayer 发放），
+        // 被护盾/BEFORE 拦下的未遂击杀不占序号
+        if (killerPlayer != null
+                && GameWorldComponent.KEY.get(target.getWorld()).isPlayerDead(target.getUuid())) {
+            GameWorldComponent killerGameWorld = GameWorldComponent.KEY.get(killerPlayer.getWorld());
+            if (killerGameWorld.isRole(killerPlayer, Noellesroles.BANDIT)) {
+                int ordinal = this.killSequence().next();
+                if (ordinal == 2) {
+                    PlayerShopComponent.KEY.get(killerPlayer).addToBalance(-25);
+                } else if (ordinal >= 3) {
+                    PlayerShopComponent.KEY.get(killerPlayer).addToBalance(-50);
+                }
+            }
+        }
 
         // Play hit sound but do NOT stop — continue flying for penetration
         this.playSound(SoundEvents.ITEM_TRIDENT_HIT, 1.0F, 1.0F);

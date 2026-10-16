@@ -30,10 +30,11 @@ public class NoellesRolesEntities {
             EntityType.Builder.create(PoisonGasCloudEntity::new, SpawnGroup.MISC).dimensions(0.5f, 0.5f).build("poison_gas_cloud")
     );
 
+    // 飞斧实体：碰撞箱边长为原来的 1.25 倍（0.5 * 1.25 = 0.625），放大后更易命中
     public static final EntityType<ThrowingAxeEntity> THROWING_AXE_ENTITY = Registry.register(
             Registries.ENTITY_TYPE,
             Identifier.of(Noellesroles.MOD_ID, "throwing_axe"),
-            EntityType.Builder.<ThrowingAxeEntity>create(ThrowingAxeEntity::new, SpawnGroup.MISC).dimensions(0.5f, 0.5f).build("throwing_axe")
+            EntityType.Builder.<ThrowingAxeEntity>create(ThrowingAxeEntity::new, SpawnGroup.MISC).dimensions(0.625f, 0.625f).build("throwing_axe")
     );
 
     public static final EntityType<HunterTrapEntity> HUNTER_TRAP_ENTITY = Registry.register(

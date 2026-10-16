@@ -4,7 +4,6 @@ import dev.doctor4t.wathe.api.WatheRoles;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import org.agmas.noellesroles.Noellesroles;
-import org.agmas.noellesroles.serialkiller.SerialKillerPlayerComponent;
 
 public final class KillRewardResolver {
     private static final int BASE_KILL_MONEY = 100;
@@ -38,15 +37,13 @@ public final class KillRewardResolver {
             timeDeltaSeconds += BASE_CIVILIAN_KILL_TIME_SECONDS;
         }
 
-        if (victim != null && gameWorld.isRole(killer, Noellesroles.SERIAL_KILLER)) {
-            SerialKillerPlayerComponent serial = SerialKillerPlayerComponent.KEY.get(killer);
-            if (serial.isCurrentTarget(victim.getUuid())) {
-                money += SerialKillerPlayerComponent.getBonusMoney();
-            }
-        }
-
         if (gameWorld.isRole(killer, Noellesroles.BOMBER) && context.deathReason() == Noellesroles.DEATH_REASON_BOMB) {
             money += 50;
+        }
+
+        // 黑帮巨星：每击杀一名玩家获得 25 金币
+        if (victim != null && gameWorld.isRole(killer, Noellesroles.GANGSTER_STAR)) {
+            money += 25;
         }
 
         if (gameWorld.isRole(killer, WatheRoles.LOOSE_END) && context.bombOwnerUuid() != null) {
@@ -58,6 +55,11 @@ public final class KillRewardResolver {
         if (gameWorld.isRole(killer, Noellesroles.COMMANDER)) {
             money -= 25;
         }
+
+        // 噬梦者：永眠击杀不再扣减击杀奖励（原为默认100 - 50 = 50），
+        // 现在凶手吃满默认的 100；队友额外平分 50 由 DreamEaterKillRewardHelper 单独结算。
+
+        // 强盗：左轮手枪与飞斧击杀均按默认 100 结算（不再有 ±25 调整）
 
         if (context.deathReason() == dev.doctor4t.wathe.game.GameConstants.DeathReasons.POISON
                 && context.poisonerUuid() != null) {
@@ -85,6 +87,12 @@ public final class KillRewardResolver {
             if (context.deathReason() == Noellesroles.DEATH_REASON_BOMB && gameWorld.isRole(killer, Noellesroles.BOMBER)) {
                 money = 150;
             }
+            // 强盗对幻觉假人的击杀按默认 100 结算（与真实击杀一致，不再有 ±25 调整）
+        }
+
+        // 黑帮巨星对幻觉假人的击杀同样生效：与真实击杀一致 +25
+        if (gameWorld.isRole(killer, Noellesroles.GANGSTER_STAR)) {
+            money += 25;
         }
 
         int timeDeltaSeconds = 0;

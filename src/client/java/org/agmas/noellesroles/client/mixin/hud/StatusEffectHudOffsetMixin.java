@@ -8,12 +8,14 @@ import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.util.Identifier;
+import org.agmas.noellesroles.client.economist.EconomistClientState;
+import org.agmas.noellesroles.client.gui.TopRightInfoHudRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 /**
- * 当右上角金币 HUD 可见时，把状态效果图标整体下移到金币下方。
+ * 当右上角金币 HUD 或信息块可见时，把状态效果图标整体下移到它们下方。
  */
 @Mixin(InGameHud.class)
 public abstract class StatusEffectHudOffsetMixin {
@@ -58,10 +60,18 @@ public abstract class StatusEffectHudOffsetMixin {
     }
 
     private static int noellesroles$offsetStatusEffectHudY(int originalY) {
-        if (!noellesroles$shouldShiftStatusEffectsBelowMoneyHud()) {
+        int bottomY = -1;
+        if (noellesroles$shouldShiftStatusEffectsBelowMoneyHud()) {
+            bottomY = MONEY_HUD_BOTTOM_Y;
+            if (EconomistClientState.isObserving()) {
+                bottomY += EconomistClientState.OBSERVATION_LINE_HEIGHT;
+            }
+        }
+        bottomY = Math.max(bottomY, TopRightInfoHudRenderer.getHudBottomY());
+        if (bottomY < 0) {
             return originalY;
         }
-        return Math.max(originalY, MONEY_HUD_BOTTOM_Y);
+        return Math.max(originalY, bottomY);
     }
 
     private static boolean noellesroles$shouldShiftStatusEffectsBelowMoneyHud() {
