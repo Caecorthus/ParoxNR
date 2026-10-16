@@ -79,5 +79,13 @@
             }
         ],
         "subtitle": "subtitles.noellesroles.ambient.jester_moment"
+    },
+    "ambient.psycho_drone": {
+        "sounds": [
+            {
+                "name": "wathe:ambient/psycho_drone"
+            }
+        ],
+        "subtitle": "subtitles.ambient.psycho_drone"
     }
 }
