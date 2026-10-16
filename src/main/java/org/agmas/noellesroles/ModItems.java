@@ -9,7 +9,10 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.text.Text;
 import org.agmas.noellesroles.item.AntidoteItem;
 import org.agmas.noellesroles.item.AdrenalineItem;
+import org.agmas.noellesroles.item.AssassinBookItem;
+import org.agmas.noellesroles.item.AttendantRegisterItem;
 import org.agmas.noellesroles.item.FineDrinkItem;
+import org.agmas.noellesroles.item.ForgedPotionItem;
 import org.agmas.noellesroles.item.TimedBombItem;
 import org.agmas.noellesroles.item.IronManVialItem;
 import org.agmas.noellesroles.item.PoisonNeedleItem;
@@ -20,6 +23,8 @@ import org.agmas.noellesroles.item.PortableRadarItem;
 import org.agmas.noellesroles.item.RepairToolItem;
 import org.agmas.noellesroles.item.RiotForkItem;
 import org.agmas.noellesroles.item.RiotShieldItem;
+import org.agmas.noellesroles.item.ShopIconItem;
+import org.agmas.noellesroles.item.SleepingPillItem;
 import org.agmas.noellesroles.item.ThrowingAxeItem;
 import org.agmas.noellesroles.item.HunterTrapItem;
 import org.agmas.noellesroles.item.DoubleBarrelShotgunItem;
@@ -29,6 +34,7 @@ import org.agmas.noellesroles.item.GangsterStarBulletItem;
 import org.agmas.noellesroles.item.MedicalSplintItem;
 import org.agmas.noellesroles.item.BaseSpiritItem;
 import org.agmas.noellesroles.item.IngredientItem;
+import org.agmas.noellesroles.item.VoodooDollItem;
 import org.agmas.noellesroles.item.ingredient.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -61,6 +67,7 @@ public class ModItems {
         IngredientItem.register((IngredientItem) VODKA);
         IngredientItem.register((IngredientItem) TEQUILA);
         IngredientItem.register((IngredientItem) WHISKEY);
+        IngredientItem.register((IngredientItem) BRANDY);
         IngredientItem.register((IngredientItem) ICE_CUBE);
         IngredientItem.register((IngredientItem) LIQUEUR);
         IngredientItem.register((IngredientItem) SPECIAL_SPICE);
@@ -74,11 +81,7 @@ public class ModItems {
             new Item(new Item.Settings().maxCount(1)),
             "neutral_master_key"
     );
-    public static final Item DEFENSE_VIAL = register(
-            new Item(new Item.Settings().maxCount(1)),
-            "defense_vial"
-    );
-    public static final Item ROLE_MINE = register(
+    public static final Item ROLE_MINE = registerHidden(
             new Item(new Item.Settings().maxCount(1)),
             "role_mine"
     );
@@ -86,7 +89,7 @@ public class ModItems {
             new TimedBombItem(new Item.Settings().maxCount(1)),
             "timed_bomb"
     );
-    public static final Item FINE_DRINK = register(
+    public static final Item FINE_DRINK = registerHidden(
             new FineDrinkItem(new Item.Settings().maxCount(1)),
             "fine_drink"
     );
@@ -117,6 +120,11 @@ public class ModItems {
     public static final Item THROWING_AXE = register(
             new ThrowingAxeItem(new Item.Settings().maxCount(1)),
             "throwing_axe"
+    );
+    // 强盗「回收飞斧」：购买即生效，不进入背包（商店图标物品，隐藏于创造模式物品栏）
+    public static final Item RECOVER_AXE = registerHidden(
+            new ShopIconItem(new Item.Settings().maxCount(1), "item.noellesroles.recover_axe.tooltip"),
+            "recover_axe"
     );
     public static final Item CATALYST = register(
             new CatalystItem(new Item.Settings().maxCount(1)),
@@ -150,13 +158,66 @@ public class ModItems {
             new DoubleBarrelShellItem(new Item.Settings().maxCount(16)),
             "double_barrel_shell"
     );
-    public static final Item GANGSTER_STAR_BULLET = register(
+    public static final Item GANGSTER_STAR_BULLET = registerHidden(
             new GangsterStarBulletItem(new Item.Settings().maxCount(16)),
             "gangster_star_bullet"
     );
-    public static final Item GANGSTER_SPIRIT = register(
+    public static final Item GANGSTER_SPIRIT = registerHidden(
             new GangsterSpiritItem(new Item.Settings().maxCount(1)),
             "gangster_spirit"
+    );
+    // 经济学家商店商品：购买即生效，不进入背包
+    public static final Item ECONOMIC_REPORT = registerHidden(
+            new Item(new Item.Settings().maxCount(1)),
+            "economic_report"
+    );
+
+    // ---- 噬梦者系统 ----
+    public static final Item SLEEPING_PILL = register(
+            new SleepingPillItem(new Item.Settings().maxCount(1)),
+            "sleeping_pill"
+    );
+    // 3x蝎子与降帷：购买即生效，不进入背包（商店图标物品，隐藏于创造模式物品栏）
+    public static final Item SCORPION_X3 = registerHidden(
+            new ShopIconItem(new Item.Settings().maxCount(1), "item.noellesroles.scorpion_x3.tooltip"),
+            "scorpion_x3"
+    );
+    public static final Item CURTAIN = registerHidden(
+            new ShopIconItem(new Item.Settings().maxCount(1), "item.noellesroles.curtain.tooltip"),
+            "curtain"
+    );
+
+    // ---- 巫毒师系统 ----
+    // 商店购买道具，隐藏于创造模式物品栏
+    public static final Item VOODOO_DOLL = registerHidden(
+            new VoodooDollItem(new Item.Settings().maxCount(1)),
+            "voodoo_doll"
+    );
+
+    // ---- 刺客系统 ----
+    // 刺客商店购买道具，隐藏于创造模式物品栏
+    public static final Item ASSASSIN_BOOK = registerHidden(
+            new AssassinBookItem(new Item.Settings().maxCount(1)),
+            "assassin_book"
+    );
+
+    // ---- 乘务员系统 ----
+    // 开局发放道具，隐藏于创造模式物品栏
+    public static final Item ATTENDANT_REGISTER = registerHidden(
+            new AttendantRegisterItem(new Item.Settings().maxCount(1)),
+            "attendant_register"
+    );
+
+    // ---- 变形者系统 ----
+    // 「万千变化」：购买即生效，不进入背包（商店图标物品，隐藏于创造模式物品栏）
+    public static final Item MYRIAD_CHANGES = registerHidden(
+            new ShopIconItem(new Item.Settings().maxCount(1), "item.noellesroles.myriad_changes.tooltip"),
+            "myriad_changes"
+    );
+    // 「赝造药水」：对尸体使用，把尸体皮肤伪装成指定玩家
+    public static final Item FORGED_POTION = registerHidden(
+            new ForgedPotionItem(new Item.Settings().maxCount(1)),
+            "forged_potion"
     );
 
     // ---- 工程师系统 ----
@@ -190,6 +251,10 @@ public class ModItems {
             new WhiskeyItem(new Item.Settings().maxCount(1)),
             "whiskey"
     );
+    public static final Item BRANDY = register(
+            new BrandyItem(new Item.Settings().maxCount(1)),
+            "brandy"
+    );
     public static final Item ICE_CUBE = register(
             new IceCubeItem(new Item.Settings().maxCount(1)),
             "ice_cube"
@@ -214,6 +279,12 @@ public class ModItems {
 
         // Return the registered item!
         return registeredItem;
+    }
+
+    /** 注册但不加入创造模式道具栏。 */
+    public static Item registerHidden(Item item, String id) {
+        Identifier itemID = Identifier.of(Noellesroles.MOD_ID, id);
+        return Registry.register(Registries.ITEM, itemID, item);
     }
 
 }

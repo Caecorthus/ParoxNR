@@ -1,9 +1,9 @@
 package org.agmas.noellesroles.mixin.wathe;
 
 import dev.doctor4t.wathe.cca.MapVotingComponent;
-import dev.doctor4t.wathe.api.WatheGameModes;
 import net.minecraft.util.Identifier;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.config.NoellesRolesConfig;
 import org.agmas.noellesroles.deatharena.DeathArenaStateHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -45,37 +45,63 @@ public abstract class MapVotingComponentMixin {
     }
 
     @Inject(method = "buildModeChoices", at = @At("RETURN"))
-    private void noellesroles$reorderMurderMayhemMode(CallbackInfo ci) {
+    private void noellesroles$hideDeprecatedMurderMayhemMode(CallbackInfo ci) {
         MapVotingComponentAccessor accessor = (MapVotingComponentAccessor) this;
         List<MapVotingComponent.VotingModeEntry> availableModes = accessor.noellesroles$getAvailableModes();
-        int classicIndex = noellesroles$indexOfMode(availableModes, WatheGameModes.MURDER_ID);
-        int mayhemIndex = noellesroles$indexOfMode(availableModes, Noellesroles.MURDER_MAYHEM_ID);
-        if (classicIndex < 0 || mayhemIndex < 0) {
-            return;
-        }
 
-        int looseEndsIndex = noellesroles$indexOfMode(availableModes, WatheGameModes.LOOSE_ENDS_ID);
-        MapVotingComponent.VotingModeEntry mayhemEntry = availableModes.remove(mayhemIndex);
-        int insertIndex = classicIndex + 1;
-        if (mayhemIndex < insertIndex) {
-            insertIndex--;
-        }
-        if (looseEndsIndex >= 0) {
-            if (mayhemIndex < looseEndsIndex) {
-                looseEndsIndex--;
-            }
-            insertIndex = Math.min(insertIndex, looseEndsIndex);
-        }
-        insertIndex = Math.max(0, Math.min(insertIndex, availableModes.size()));
-        availableModes.add(insertIndex, mayhemEntry);
+        // 迷乱谋杀模式已废弃：从可选模式里移除，玩家在模式投票中看不到它。
+        // 必须在 buildModeChoices 的 RETURN（wathe 插入「随机模式」选项之前）移除，这样
+        // 随机模式选项的插入条件与 selectRandomModeFromCurrentChoices 的抽样池都不会再包含它。
+        // 注：以前这里还会把迷乱谋杀项重排到经典谋杀后面，那套重排逻辑随本次隐藏一并删除。
+        availableModes.removeIf(entry -> Noellesroles.MURDER_MAYHEM_ID.equals(entry.gameModeId()));
     }
 
-    private static int noellesroles$indexOfMode(List<MapVotingComponent.VotingModeEntry> availableModes, Identifier gameModeId) {
-        for (int i = 0; i < availableModes.size(); i++) {
-            if (gameModeId.equals(availableModes.get(i).gameModeId())) {
-                return i;
+    /** 跳过模式投票：不进入模式投票，直接按当前/上一局模式开始地图投票。 */
+    @Inject(method = "startModeVoting(Z)V", at = @At("HEAD"), cancellable = true)
+    private void noellesroles$skipModeVoting(boolean forceModeVoting, CallbackInfo ci) {
+        if (!NoellesRolesConfig.HANDLER.instance().skipModeVoting) {
+            return;
+        }
+        ci.cancel();
+        ((MapVotingComponent) (Object) this).startVoting();
+    }
+
+    /** 跳过地图投票：地图投票一开始就按上一局地图直接结算（含选图轮盘）。 */
+    @Inject(method = "startMapVotingForMode", at = @At("RETURN"))
+    private void noellesroles$skipMapVotingOnStart(Identifier gameModeId, int playerCount, CallbackInfo ci) {
+        if (!NoellesRolesConfig.HANDLER.instance().skipMapVoting) {
+            return;
+        }
+        noellesroles$skipMapVoting();
+    }
+
+    /** 兜底：上一局地图不属于当前模式时走随机结算，轮盘一出现即结束。 */
+    @Inject(method = "serverTick", at = @At("TAIL"))
+    private void noellesroles$skipRoulette(CallbackInfo ci) {
+        MapVotingComponentAccessor accessor = (MapVotingComponentAccessor) this;
+        if (accessor.noellesroles$isVotingActive()
+                && accessor.noellesroles$isRoulettePhase()
+                && NoellesRolesConfig.HANDLER.instance().skipMapVoting) {
+            accessor.noellesroles$invokeFinishSelection();
+        }
+    }
+
+    private void noellesroles$skipMapVoting() {
+        MapVotingComponentAccessor accessor = (MapVotingComponentAccessor) this;
+        if (!accessor.noellesroles$isVotingActive()) {
+            return;
+        }
+        Identifier previousDimension = ((MapVotingComponent) (Object) this).getLastSelectedDimension();
+        List<MapVotingComponent.VotingMapEntry> maps = accessor.noellesroles$getAvailableMaps();
+        if (previousDimension != null) {
+            for (int i = 0; i < maps.size(); i++) {
+                if (previousDimension.equals(maps.get(i).dimensionId())) {
+                    accessor.noellesroles$setSelectedMapIndex(i);
+                    accessor.noellesroles$invokeFinishSelection();
+                    return;
+                }
             }
         }
-        return -1;
+        accessor.noellesroles$invokeEndVoting(true);
     }
 }
