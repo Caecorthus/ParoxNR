@@ -18,10 +18,12 @@ public class AbilityPlayerComponent implements AutoSyncedComponent, ServerTickin
     private final PlayerEntity player;
     public int cooldown = 0;
     private int pendingKnifeCooldownOverride = 0;
+    private int knifeCooldownOverrideTicks = 0;
 
     public void reset() {
         this.cooldown = 0;
         this.pendingKnifeCooldownOverride = 0;
+        this.knifeCooldownOverrideTicks = 0;
         this.sync();
     }
 
@@ -66,6 +68,12 @@ public class AbilityPlayerComponent implements AutoSyncedComponent, ServerTickin
             this.player.getItemCooldownManager().set(dev.doctor4t.wathe.index.WatheItems.KNIFE, this.pendingKnifeCooldownOverride);
             this.pendingKnifeCooldownOverride = 0;
         }
+
+        // 粘性覆写:每 tick 递减重写,使 Wathe 刺杀收尾写入的默认长冷却无法盖掉短冷却
+        if (this.knifeCooldownOverrideTicks > 0) {
+            this.player.getItemCooldownManager().set(dev.doctor4t.wathe.index.WatheItems.KNIFE, this.knifeCooldownOverrideTicks);
+            --this.knifeCooldownOverrideTicks;
+        }
     }
 
     public int getCooldown() {
@@ -81,13 +89,19 @@ public class AbilityPlayerComponent implements AutoSyncedComponent, ServerTickin
         this.pendingKnifeCooldownOverride = ticks;
     }
 
+    public void startKnifeCooldownOverride(int ticks) {
+        this.knifeCooldownOverrideTicks = Math.max(this.knifeCooldownOverrideTicks, ticks);
+    }
+
     public void writeToNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         tag.putInt("cooldown", this.cooldown);
         tag.putInt("pendingKnifeCooldownOverride", this.pendingKnifeCooldownOverride);
+        tag.putInt("knifeCooldownOverrideTicks", this.knifeCooldownOverrideTicks);
     }
 
     public void readFromNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         this.cooldown = tag.contains("cooldown") ? tag.getInt("cooldown") : 0;
         this.pendingKnifeCooldownOverride = tag.contains("pendingKnifeCooldownOverride") ? tag.getInt("pendingKnifeCooldownOverride") : 0;
+        this.knifeCooldownOverrideTicks = tag.contains("knifeCooldownOverrideTicks") ? tag.getInt("knifeCooldownOverrideTicks") : 0;
     }
 }
