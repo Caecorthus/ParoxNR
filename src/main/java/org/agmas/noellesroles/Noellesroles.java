@@ -211,6 +211,7 @@ import org.agmas.noellesroles.packet.HallucinationSoundS2CPacket;
 import org.agmas.noellesroles.util.BodyTargetHelper;
 import org.agmas.noellesroles.util.MisKillGunCooldownHelper;
 import org.agmas.noellesroles.util.OpeningKnockbackResistanceHelper;
+import org.agmas.noellesroles.util.PushAttributionTracker;
 import org.agmas.noellesroles.util.PassengerDeathCompensationHelper;
 import org.agmas.noellesroles.util.RoleUtils;
 import org.agmas.noellesroles.util.SpectatorStateHelper;
@@ -318,7 +319,7 @@ public class Noellesroles implements ModInitializer {
     public static Identifier DEATH_REASON_DREAM_EATER_SLEEP = Identifier.of(MOD_ID, "dream_eater_sleep");
 
     // 犯罪推理学家：这些死因在「无人担责」时把"凶手"视为死者本人（自行坠落出列车/小脑/精神崩溃/退出游戏）。
-    // 若死者是被他人推下列车，Wathe 会把 lastAttacker 作为 killer 传入，此时凶手就是推人者本人，不再视为自杀。
+    // 若死者是被他人推下列车，killer 就是推人者（原版 lastAttacker，过期后由 PushAttributionTracker 补上），不再视为自杀。
     private static final Set<Identifier> CRIMINAL_REASONER_SELF_ATTRIBUTED_DEATHS = Set.of(
             GameConstants.DeathReasons.FELL_OUT_OF_TRAIN,
             GameConstants.DeathReasons.SHOT_INNOCENT,
@@ -1807,7 +1808,8 @@ public class Noellesroles implements ModInitializer {
             }
             if (victim.getWorld() instanceof ServerWorld serverWorld) {
                 UUID recordedKillerUuid = killer != null ? killer.getUuid() : null;
-                // 被推下列车时 killer 就是推人者（Wathe 传入 lastAttacker，5 秒内的最后一次攻击者），凶手即推人者；
+                // 被推下列车时 killer 就是推人者（原版 lastAttacker 只保留 5 秒，被推后仍在下坠时由
+                // GameWorldComponentFellOutKillerMixin 用 PushAttributionTracker 补上），凶手即推人者；
                 // 只有无人担责的死因（自行坠落出列车/小脑/精神崩溃/退出游戏）才把凶手记为死者本人（可被推理）
                 if (recordedKillerUuid == null && deathReason != null
                         && CRIMINAL_REASONER_SELF_ATTRIBUTED_DEATHS.contains(deathReason)) {
@@ -2184,6 +2186,7 @@ public class Noellesroles implements ModInitializer {
                 DeathArenaServerController.forceShutdown(serverWorld, true);
                 BreacherPlayerComponent.cleanupMarkers(serverWorld);
                 OpeningKnockbackResistanceHelper.reset(serverWorld.getServer());
+                PushAttributionTracker.reset();
             }
             HiddenBodiesWorldComponent.KEY.get(world).reset();
             BodyForgeryWorldComponent.KEY.get(world).reset();
@@ -2253,6 +2256,9 @@ public class Noellesroles implements ModInitializer {
         });
 
         // 每 tick 检查时刻触发条件（tick 循环驱动，替代事件驱动）
+        // 推人坠车归属：跟踪被推者是否离地/落地
+        ServerTickEvents.END_SERVER_TICK.register(PushAttributionTracker::tick);
+
         ServerTickEvents.END_WORLD_TICK.register(world -> {
             // 开局刀冷却结束即摘掉击退抗性（冷却在双角色选择期间被冻结，不能按世界时间推算）
             OpeningKnockbackResistanceHelper.tick(world.getServer());

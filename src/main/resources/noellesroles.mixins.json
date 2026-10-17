@@ -72,6 +72,8 @@
     "wathe.GameWorldComponentAccessor",
     "wathe.GameRecordManagerArenaFilterMixin",
     "wathe.GameRecordManagerDeathMixin",
+    "wathe.GameWorldComponentFellOutKillerMixin",
+    "push.LivingEntityPushAttributionMixin",
     "wathe.GunMissRecordMixin",
     "wathe.GrenadeEntityMixin",
     "wathe.LooseEndsGameModeMixin",
