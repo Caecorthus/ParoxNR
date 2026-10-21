@@ -20,6 +20,8 @@ import net.minecraft.util.TypedActionResult;
 import net.minecraft.world.World;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.attendant.AttendantPlayerComponent;
+import org.agmas.noellesroles.entity.PuppetEntity;
+import org.agmas.noellesroles.puppeteer.PuppeteerPlayerComponent;
 import org.agmas.noellesroles.morphling.BodyForgeryWorldComponent;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.agmas.noellesroles.packet.OpenAttendantRegisterS2CPacket;
@@ -65,7 +67,7 @@ public class AttendantRegisterItem extends Item {
         if (!gameWorld.isRole(user, Noellesroles.ATTENDANT)) {
             return ActionResult.PASS;
         }
-        if (!(entity instanceof PlayerEntity) && !(entity instanceof PlayerBodyEntity)) {
+        if (!(entity instanceof PlayerEntity) && !(entity instanceof PlayerBodyEntity) && !(entity instanceof PuppetEntity)) {
             return ActionResult.PASS;
         }
         // 客户端先认领这次点击：服务端一旦返回 PASS，原版 doItemUse 会落到 use() 误开面板
@@ -80,6 +82,27 @@ public class AttendantRegisterItem extends Item {
 
         AttendantPlayerComponent component = AttendantPlayerComponent.KEY.get(user);
 
+        // 傀儡师的闲置傀儡 / 本体替身：按所见外观（傀儡为死者，替身为傀儡师本人）登记见面与存活
+        if (entity instanceof PuppetEntity standIn) {
+            UUID identity = standIn.getSkinUuid();
+            if (identity == null || identity.equals(user.getUuid())
+                    || user.squaredDistanceTo(standIn) > REGISTER_RANGE_SQ) {
+                return ActionResult.PASS;
+            }
+            component.ensureEntries();
+            boolean metChanged = component.markMet(identity);
+            boolean aliveChanged = component.markAlive(identity);
+            if (!metChanged && !aliveChanged) {
+                return ActionResult.PASS;
+            }
+            component.highlight(standIn, AttendantPlayerComponent.HIGHLIGHT_TICKS);
+            NbtCompound extra = new NbtCompound();
+            extra.putString("action", "met");
+            extra.putUuid("target", identity);
+            GameRecordManager.recordSkillUse(serverUser, Noellesroles.ATTENDANT_ID, null, extra);
+            return ActionResult.SUCCESS;
+        }
+
         if (entity instanceof PlayerEntity target) {
             if (target == user
                     || !GameFunctions.isPlayerPlayingAndAlive(target)
@@ -91,10 +114,12 @@ public class AttendantRegisterItem extends Item {
 
             // 变形者兼容：按所见外观登记——活人外观登记伪装对象的见面+存活，尸体外观（伪装尸体/本人假尸体）登记对应身份的死亡
             MorphlingPlayerComponent morph = MorphlingPlayerComponent.KEY.get(target);
-            boolean disguised = morph.getMorphTicks() > 0
+            // 傀儡形态的傀儡师外观是死者，按死者登记
+            UUID puppetDisguise = PuppeteerPlayerComponent.KEY.get(target).getControlledSource();
+            boolean disguised = puppetDisguise != null || (morph.getMorphTicks() > 0
                     && morph.disguise != null
-                    && !morph.disguise.equals(target.getUuid());
-            UUID identity = disguised ? morph.disguise : target.getUuid();
+                    && !morph.disguise.equals(target.getUuid()));
+            UUID identity = puppetDisguise != null ? puppetDisguise : disguised ? morph.disguise : target.getUuid();
             if (identity.equals(user.getUuid())) {
                 // 伪装成乘务员本人时不能登记自己（与 target == user 一致）
                 return ActionResult.PASS;

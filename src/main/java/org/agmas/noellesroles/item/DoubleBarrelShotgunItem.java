@@ -27,7 +27,10 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
+import org.agmas.noellesroles.entity.PuppetEntity;
 import org.agmas.noellesroles.hallucination.HallucinationDummyInteractionHelper;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -86,6 +89,14 @@ public class DoubleBarrelShotgunItem extends Item {
             }
 
             PlayerEntity target = findTarget(user);
+            // 傀儡师的闲置傀儡 / 本体替身比玩家目标更近时，打中的是它
+            PuppetEntity puppetTarget = findPuppetTarget(user, target);
+            if (puppetTarget != null) {
+                target = null;
+                PuppeteerControl.onEntityHit(puppetTarget,
+                        user instanceof ServerPlayerEntity serverShooter ? serverShooter : null,
+                        GameConstants.DeathReasons.GUN);
+            }
             if (target instanceof ServerPlayerEntity serverTarget && user instanceof ServerPlayerEntity serverUser) {
                 GameFunctions.killPlayer(serverTarget, true, serverUser, GameConstants.DeathReasons.GUN);
             }
@@ -147,6 +158,39 @@ public class DoubleBarrelShotgunItem extends Item {
             player.getWorld().playSound(null, player.getBlockPos(), SoundEvents.ITEM_ARMOR_EQUIP_CHAIN.value(), SoundCategory.PLAYERS, 0.6F, 1.4F);
         }
         return true;
+    }
+
+    /** 射线上比 playerTarget 更近（或没有玩家目标时）的傀儡实体，规则与 {@link #findTarget} 相同。 */
+    @Nullable
+    private static PuppetEntity findPuppetTarget(PlayerEntity user, @Nullable PlayerEntity playerTarget) {
+        Vec3d eyePos = user.getEyePos();
+        Vec3d look = user.getRotationVec(1.0F);
+        Vec3d end = eyePos.add(look.multiply(RANGE));
+        Box searchBox = user.getBoundingBox().stretch(look.multiply(RANGE)).expand(0.5);
+        double playerDistanceSq = playerTarget != null ? playerTarget.squaredDistanceTo(user) : Double.MAX_VALUE;
+
+        return user.getWorld()
+            .getEntitiesByClass(PuppetEntity.class, searchBox, candidate -> candidate.squaredDistanceTo(user) < playerDistanceSq
+                && !user.getUuid().equals(candidate.getOwnerUuid()))
+            .stream()
+            .filter(candidate -> {
+                var hit = candidate.getBoundingBox().expand(0.1).raycast(eyePos, end);
+                if (hit.isEmpty()) {
+                    return false;
+                }
+                Vec3d hitPos = hit.get();
+                HitResult blockHit = user.getWorld().raycast(new RaycastContext(
+                    eyePos,
+                    hitPos,
+                    RaycastContext.ShapeType.COLLIDER,
+                    RaycastContext.FluidHandling.NONE,
+                    user
+                ));
+                return blockHit.getType() == HitResult.Type.MISS
+                    || blockHit.getPos().squaredDistanceTo(eyePos) + 1.0E-4 >= eyePos.squaredDistanceTo(hitPos);
+            })
+            .min(java.util.Comparator.comparingDouble(candidate -> candidate.squaredDistanceTo(user)))
+            .orElse(null);
     }
 
     public static PlayerEntity findTarget(PlayerEntity user) {

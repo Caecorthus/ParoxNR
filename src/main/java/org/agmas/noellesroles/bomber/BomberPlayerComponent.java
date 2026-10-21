@@ -22,6 +22,7 @@ import net.minecraft.util.Identifier;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import org.agmas.noellesroles.ModSounds;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.puppeteer.PuppeteerPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.taotie.TaotiePlayerComponent;
 import org.agmas.noellesroles.util.SwallowedInteractionHelper;
@@ -118,6 +119,7 @@ public class BomberPlayerComponent implements AutoSyncedComponent, ServerTicking
         this.isBeeping = false;
         this.bomberUuid = bomber.getUuid();
         this.lastDisplayedSeconds = -1;
+        PuppeteerPlayerComponent.get(this.player).onBombAttached();
         this.sync();
         if (bomber instanceof ServerPlayerEntity serverBomber && player instanceof ServerPlayerEntity target) {
             NbtCompound extra = new NbtCompound();
@@ -162,9 +164,11 @@ public class BomberPlayerComponent implements AutoSyncedComponent, ServerTicking
         targetComponent.bomberUuid = this.bomberUuid;
         target.getItemCooldownManager().set(TIMED_BOMB, TRANSFER_COOLDOWN_TICKS);
         targetComponent.lastDisplayedSeconds = -1;
+        PuppeteerPlayerComponent.get(target).onBombAttached();
         targetComponent.sync();
 
         // 清除自己的炸弹
+        PuppeteerPlayerComponent.get(this.player).clearBombedSource();
         this.hasBomb = false;
         this.bombTimer = 0;
         this.beepTimer = 0;

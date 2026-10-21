@@ -1,5 +1,6 @@
 package org.agmas.noellesroles;
 
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.registry.Registries;
@@ -10,6 +11,7 @@ import org.agmas.noellesroles.entity.PoisonGasBombEntity;
 import org.agmas.noellesroles.entity.PoisonGasCloudEntity;
 import org.agmas.noellesroles.entity.ThrowingAxeEntity;
 import org.agmas.noellesroles.entity.HunterTrapEntity;
+import org.agmas.noellesroles.entity.PuppetEntity;
 
 public class NoellesRolesEntities {
     public static final EntityType<RoleMineEntity> ROLE_MINE_ENTITY_ENTITY_TYPE = Registry.register(
@@ -43,5 +45,19 @@ public class NoellesRolesEntities {
             EntityType.Builder.<HunterTrapEntity>create(HunterTrapEntity::new, SpawnGroup.MISC).dimensions(0.6f, 0.1f).build("hunter_trap")
     );
 
-    public static void init() {}
+    // 傀儡师：闲置傀儡 / 本体替身（站立人形，追踪距离与玩家一致，供本能透视远距离显示）
+    public static final EntityType<PuppetEntity> PUPPET_ENTITY = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Noellesroles.MOD_ID, "puppet"),
+            EntityType.Builder.<PuppetEntity>create(PuppetEntity::new, SpawnGroup.MISC)
+                    .dimensions(0.6f, 1.8f)
+                    .eyeHeight(1.62f)
+                    .maxTrackingRange(32)
+                    .trackingTickInterval(2)
+                    .build("puppet")
+    );
+
+    public static void init() {
+        FabricDefaultAttributeRegistry.register(PUPPET_ENTITY, PuppetEntity.createPuppetAttributes());
+    }
 }

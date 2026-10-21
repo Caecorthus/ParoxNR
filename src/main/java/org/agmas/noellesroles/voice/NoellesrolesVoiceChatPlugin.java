@@ -9,10 +9,13 @@ import de.maxhenkel.voicechat.api.events.*;
 import de.maxhenkel.voicechat.api.packets.Packet;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.game.GameFunctions;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.GameMode;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
+import org.agmas.noellesroles.puppeteer.PuppeteerPlayerComponent;
 import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
 import org.agmas.noellesroles.hallucination.HallucinationHelper;
 import org.agmas.noellesroles.noisemaker.NoisemakerPlayerComponent;
@@ -219,6 +222,42 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
     }
 
     /**
+     * 傀儡师操纵傀儡期间：声音从本体替身的位置发出，而不是从傀儡（玩家实体当前所在处）发出。
+     * 取消原本的近距离语音，改为把该语音包以替身位置重新发给替身附近的玩家。
+     */
+    public void puppeteerVoiceEvent(MicrophonePacketEvent event) {
+        if (event.isCancelled() || event.getSenderConnection() == null
+                || event.getSenderConnection().getPlayer() == null
+                || !(event.getSenderConnection().getPlayer().getPlayer() instanceof ServerPlayerEntity speaker)) {
+            return;
+        }
+        if (!PuppeteerPlayerComponent.isControllingPuppet(speaker)) {
+            return;
+        }
+        Entity body = PuppeteerControl.getBodyAnchor(speaker);
+        if (body == speaker) {
+            return;
+        }
+        event.cancel();
+        VoicechatServerApi api = event.getVoicechat();
+        double distance = api.getVoiceChatDistance();
+        for (ServerPlayerEntity listener : speaker.getServerWorld().getPlayers()) {
+            if (listener == speaker || listener.squaredDistanceTo(body) > distance * distance) {
+                continue;
+            }
+            VoicechatConnection connection = api.getConnectionOf(listener.getUuid());
+            if (connection == null) {
+                continue;
+            }
+            api.sendLocationalSoundPacketTo(connection, event.getPacket()
+                    .locationalSoundPacketBuilder()
+                    .position(api.createPosition(body.getX(), body.getEyeY(), body.getZ()))
+                    .distance((float) distance)
+                    .build());
+        }
+    }
+
+    /**
      * Handle VoiceChat group removal events
      * When a Taotie stomach group is auto-deleted (no members), clear the reference
      */
@@ -406,6 +445,8 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
         registration.registerEvent(MicrophonePacketEvent.class, this::taotieVoiceEvent);
         registration.registerEvent(MicrophonePacketEvent.class, this::silencerVoiceEvent);
         registration.registerEvent(MicrophonePacketEvent.class, this::noisemakerBroadcastEvent);
+        // 放在其余麦克风处理之后：被禁言 / 双角色选择等已取消的语音不再转发
+        registration.registerEvent(MicrophonePacketEvent.class, this::puppeteerVoiceEvent);
         registration.registerEvent(CreateGroupEvent.class, this::onGroupCreated);
         registration.registerEvent(JoinGroupEvent.class, this::onGroupJoined);
         registration.registerEvent(RemoveGroupEvent.class, this::onGroupRemoved);

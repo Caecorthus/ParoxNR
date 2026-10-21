@@ -35,7 +35,8 @@ public final class BodyTargetHelper {
         }
 
         GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
-        if (gameWorld.isRole(player, Noellesroles.VULTURE) || gameWorld.isRole(player, Noellesroles.FERRYMAN)) {
+        if (gameWorld.isRole(player, Noellesroles.VULTURE) || gameWorld.isRole(player, Noellesroles.FERRYMAN)
+                || gameWorld.isRole(player, Noellesroles.PUPPETEER)) {
             return SKILL_RANGE;
         }
         if (gameWorld.isRole(player, Noellesroles.JUNKER)) {

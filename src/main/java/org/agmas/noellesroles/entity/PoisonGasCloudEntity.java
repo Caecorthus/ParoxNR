@@ -3,8 +3,11 @@ package org.agmas.noellesroles.entity;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.cca.PlayerPoisonComponent;
 import dev.doctor4t.wathe.cca.PlayerStaminaComponent;
+import dev.doctor4t.wathe.game.GameConstants;
 import dev.doctor4t.wathe.game.GameFunctions;
+import org.agmas.noellesroles.NoellesRolesEntities;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
@@ -46,6 +49,7 @@ public class PoisonGasCloudEntity extends Entity {
     private Set<BlockPos> frontier = new HashSet<>();
     private final Map<UUID, Integer> exposureTicks = new HashMap<>();
     private final Map<UUID, Integer> dummyExposureTicks = new HashMap<>();
+    private final Map<UUID, Integer> puppetExposureTicks = new HashMap<>();
     private final Set<UUID> playersInGas = new HashSet<>();
     private UUID ownerUuid;
     private int age = 0;
@@ -183,6 +187,34 @@ public class PoisonGasCloudEntity extends Entity {
             }
         }
 
+        // 傀儡师：闲置傀儡吸满毒气即倒地；本体替身吸满毒气则傀儡师被迫回到本体，毒落在本体身上
+        Set<UUID> seenPuppets = new HashSet<>();
+        for (PuppetEntity puppet : serverWorld.getEntitiesByType(NoellesRolesEntities.PUPPET_ENTITY, p -> isBoxInGas(p.getBoundingBox()))) {
+            seenPuppets.add(puppet.getUuid());
+            int ticks = puppetExposureTicks.getOrDefault(puppet.getUuid(), 0) + 1;
+            puppetExposureTicks.put(puppet.getUuid(), ticks);
+            if (ticks < EXPOSURE_THRESHOLD) {
+                continue;
+            }
+            puppetExposureTicks.put(puppet.getUuid(), 0);
+            ServerPlayerEntity gasOwner = ownerUuid != null ? serverWorld.getServer().getPlayerManager().getPlayer(ownerUuid) : null;
+            if (!puppet.isShell()) {
+                PuppeteerControl.onEntityHit(puppet, gasOwner, GameConstants.DeathReasons.POISON);
+                continue;
+            }
+            ServerPlayerEntity shellOwner = PuppeteerControl.returnShellOwnerToBody(puppet);
+            if (shellOwner != null && !gameWorld.isRole(shellOwner, Noellesroles.POISONER)
+                    && !AreaDamageImmunityHelper.isImmuneToAreaDamage(shellOwner)) {
+                PlayerPoisonComponent poisonComp = PlayerPoisonComponent.KEY.get(shellOwner);
+                int baseTicks = 20 * 20;
+                int poisonTime = poisonComp.poisonTicks > 0
+                        ? Math.max(1, poisonComp.poisonTicks - baseTicks)
+                        : baseTicks;
+                poisonComp.setPoisonTicks(poisonTime, ownerUuid, Noellesroles.POISON_SOURCE_GAS_BOMB);
+            }
+        }
+        puppetExposureTicks.keySet().removeIf(uuid -> !seenPuppets.contains(uuid));
+
         // 粒子效果
         if (ownerUuid != null) {
             ServerPlayerEntity owner = serverWorld.getServer().getPlayerManager().getPlayer(ownerUuid);
@@ -241,6 +273,19 @@ public class PoisonGasCloudEntity extends Entity {
         }
         playersInGas.clear();
         dummyExposureTicks.clear();
+    }
+
+    private boolean isBoxInGas(Box box) {
+        for (int x = MathHelper.floor(box.minX); x <= MathHelper.floor(box.maxX); x++) {
+            for (int y = MathHelper.floor(box.minY); y <= MathHelper.floor(box.maxY); y++) {
+                for (int z = MathHelper.floor(box.minZ); z <= MathHelper.floor(box.maxZ); z++) {
+                    if (gasBlocks.contains(new BlockPos(x, y, z))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private boolean isDummyInGas(Vec3d dummyPosition) {

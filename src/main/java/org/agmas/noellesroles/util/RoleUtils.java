@@ -62,7 +62,8 @@ public final class RoleUtils {
             Noellesroles.COMMANDER,
             Noellesroles.BREACHER,
             Noellesroles.PHONISM,
-            Noellesroles.DREAM_EATER
+            Noellesroles.DREAM_EATER,
+            Noellesroles.PUPPETEER
     );
 
     public static boolean isActualKillerRole(Role role) {

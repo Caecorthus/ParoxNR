@@ -10,6 +10,7 @@ import net.minecraft.client.util.SkinTextures;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import org.agmas.noellesroles.client.morphling.ClientMorphlingScrambleHelper;
+import org.agmas.noellesroles.client.puppeteer.PuppeteerClient;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Map;
+import java.util.UUID;
 
 @SuppressWarnings("unchecked")
 @Mixin(EntityRenderDispatcher.class)
@@ -38,6 +40,13 @@ public class MorphlingRendererDispatchMixin {
         PlayerListEntry shuffledEntry = ClientMorphlingScrambleHelper.getScrambledEntry(player);
         if (shuffledEntry != null) {
             targetModel = shuffledEntry.getSkinTextures().model();
+        }
+
+        if (targetModel == null) {
+            UUID puppetDisguise = PuppeteerClient.getPuppetDisguise(player);
+            if (puppetDisguise != null) {
+                targetModel = PuppeteerClient.getSkinTextures(puppetDisguise).model();
+            }
         }
 
         if (targetModel == null) {

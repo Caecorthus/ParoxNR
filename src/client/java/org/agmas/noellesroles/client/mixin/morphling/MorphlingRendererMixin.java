@@ -11,6 +11,7 @@ import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.util.Identifier;
 import org.agmas.noellesroles.client.morphling.ClientMorphlingScrambleHelper;
+import org.agmas.noellesroles.client.puppeteer.PuppeteerClient;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,6 +32,13 @@ public abstract class MorphlingRendererMixin {
             return;
         }
         if (!GameWorldComponent.KEY.get(player.getWorld()).isRunning()) {
+            return;
+        }
+
+        // 傀儡师操纵傀儡时呈现死者的皮肤
+        UUID puppetDisguise = PuppeteerClient.getPuppetDisguise(player);
+        if (puppetDisguise != null) {
+            cir.setReturnValue(PuppeteerClient.getSkinTextures(puppetDisguise).texture());
             return;
         }
 
@@ -69,6 +77,11 @@ public abstract class MorphlingRendererMixin {
         }
         if (!GameWorldComponent.KEY.get(instance.getWorld()).isRunning()) {
             return original.call(instance);
+        }
+
+        UUID puppetDisguise = PuppeteerClient.getPuppetDisguise(instance);
+        if (puppetDisguise != null) {
+            return PuppeteerClient.getSkinTextures(puppetDisguise);
         }
 
         MorphlingPlayerComponent morphComponent = MorphlingPlayerComponent.KEY.get(instance);

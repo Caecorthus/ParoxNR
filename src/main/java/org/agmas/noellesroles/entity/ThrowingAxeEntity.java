@@ -25,6 +25,7 @@ import org.agmas.noellesroles.ModItems;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.NoellesRolesEntities;
 import org.agmas.noellesroles.hallucination.HallucinationDummyInteractionHelper;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
 
 import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
@@ -146,7 +147,7 @@ public class ThrowingAxeEntity extends PersistentProjectileEntity {
 
             Box searchBox = this.getBoundingBox().stretch(velocity).expand(1.0);
             for (Entity entity : this.getWorld().getOtherEntities(this, searchBox)) {
-                if (!(entity instanceof ServerPlayerEntity)) continue;
+                if (!(entity instanceof ServerPlayerEntity) && !(entity instanceof PuppetEntity)) continue;
                 if (!entity.canBeHitByProjectile()) continue;
                 if (hitEntities.contains(entity.getId())) continue;
 
@@ -188,6 +189,18 @@ public class ThrowingAxeEntity extends PersistentProjectileEntity {
     @Override
     protected void onEntityHit(EntityHitResult entityHitResult) {
         Entity entity = entityHitResult.getEntity();
+
+        // 傀儡师的闲置傀儡 / 本体替身：与命中玩家相同，飞斧继续贯穿
+        if (entity instanceof PuppetEntity puppet) {
+            Entity puppetHitOwner = this.getOwner();
+            if (puppetHitOwner != null && puppetHitOwner.getUuid().equals(puppet.getOwnerUuid())) return;
+            PuppeteerControl.onEntityHit(puppet,
+                    puppetHitOwner instanceof ServerPlayerEntity sp ? sp : null,
+                    Noellesroles.DEATH_REASON_THROWING_AXE);
+            this.playSound(SoundEvents.ITEM_TRIDENT_HIT, 1.0F, 1.0F);
+            this.setVelocity(this.getVelocity().multiply(0.9, 0.9, 0.9));
+            return;
+        }
 
         // Only kill players
         if (!(entity instanceof ServerPlayerEntity target)) return;

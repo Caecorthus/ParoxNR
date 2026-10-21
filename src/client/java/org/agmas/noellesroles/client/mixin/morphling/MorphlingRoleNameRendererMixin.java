@@ -14,6 +14,7 @@ import net.minecraft.world.World;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.hallucination.ClientHallucinationVisualHelper;
 import org.agmas.noellesroles.client.morphling.ClientMorphlingScrambleHelper;
+import org.agmas.noellesroles.client.puppeteer.PuppeteerClient;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -42,6 +43,11 @@ public abstract class MorphlingRoleNameRendererMixin {
         }
         if (instance.isInvisible()) {
             return Text.literal("");
+        }
+        // 傀儡形态：名牌显示为死者
+        UUID puppetDisguise = PuppeteerClient.getPuppetDisguise(instance);
+        if (puppetDisguise != null) {
+            return PuppeteerClient.getName(puppetDisguise);
         }
         MorphlingPlayerComponent morphComp = MorphlingPlayerComponent.KEY.get(instance);
         if (morphComp.corpseMode) {

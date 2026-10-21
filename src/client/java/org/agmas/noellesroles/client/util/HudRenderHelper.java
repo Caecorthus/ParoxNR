@@ -32,6 +32,7 @@ import org.agmas.noellesroles.client.util.rolehud.OrthopedistHudRenderer;
 import org.agmas.noellesroles.client.util.rolehud.PathogenHudRenderer;
 import org.agmas.noellesroles.client.util.rolehud.PhantomHudRenderer;
 import org.agmas.noellesroles.client.util.rolehud.PhonismHudRenderer;
+import org.agmas.noellesroles.client.util.rolehud.PuppeteerHudRenderer;
 import org.agmas.noellesroles.client.util.rolehud.RecallerHudRenderer;
 import org.agmas.noellesroles.client.util.rolehud.ReporterHudRenderer;
 import org.agmas.noellesroles.client.util.rolehud.SerialKillerHudRenderer;
@@ -75,6 +76,7 @@ public final class HudRenderHelper {
         ROLE_HUD_REGISTRY.put(Noellesroles.PHANTOM, new PhantomHudRenderer());
         ROLE_HUD_REGISTRY.put(Noellesroles.PATHOGEN, new PathogenHudRenderer());
         ROLE_HUD_REGISTRY.put(Noellesroles.PHONISM, new PhonismHudRenderer());
+        ROLE_HUD_REGISTRY.put(Noellesroles.PUPPETEER, new PuppeteerHudRenderer());
         ROLE_HUD_REGISTRY.put(Noellesroles.RECALLER, new RecallerHudRenderer());
         ROLE_HUD_REGISTRY.put(Noellesroles.REPORTER, new ReporterHudRenderer());
         ROLE_HUD_REGISTRY.put(Noellesroles.SERIAL_KILLER, new SerialKillerHudRenderer());

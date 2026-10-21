@@ -8,7 +8,9 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
+import org.agmas.noellesroles.entity.PuppetEntity;
 import org.agmas.noellesroles.hallucination.HallucinationDummyInteractionHelper;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.AreaDamageImmunityHelper;
 import org.agmas.noellesroles.util.GrenadeBlastVisibilityHelper;
@@ -48,6 +50,17 @@ public class GrenadeEntityMixin {
         }
 
         Entity owner = grenade.getOwner();
+        // 傀儡师的闲置傀儡 / 本体替身与玩家使用同一爆炸范围与视线判定
+        if (grenade.getWorld() instanceof ServerWorld) {
+            Box blastBox = grenade.getBoundingBox().expand(3.0D);
+            ServerPlayerEntity attacker = owner instanceof ServerPlayerEntity serverOwner ? serverOwner : null;
+            for (PuppetEntity puppet : grenade.getWorld().getEntitiesByClass(PuppetEntity.class, blastBox,
+                    candidate -> blastBox.contains(candidate.getPos()))) {
+                if (GrenadeBlastVisibilityHelper.hasBlastLineOfSight(grenade, puppet)) {
+                    PuppeteerControl.onEntityHit(puppet, attacker, GameConstants.DeathReasons.GRENADE);
+                }
+            }
+        }
         if (!(owner instanceof ServerPlayerEntity viewer)) {
             return;
         }

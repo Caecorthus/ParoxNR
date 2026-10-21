@@ -21,7 +21,12 @@ import org.agmas.noellesroles.item.ForgedPotionItem;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.agmas.noellesroles.packet.ForgedPotionSelectC2SPacket;
 import org.agmas.noellesroles.packet.MorphC2SPacket;
+import org.agmas.noellesroles.packet.PuppeteerActionC2SPacket;
 import org.agmas.noellesroles.packet.SwapperC2SPacket;
+import org.agmas.noellesroles.client.puppeteer.PuppeteerClient;
+import org.agmas.noellesroles.puppeteer.PuppetRecord;
+import org.agmas.noellesroles.puppeteer.PuppetWorldComponent;
+import org.agmas.noellesroles.puppeteer.PuppeteerPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.SwallowedInteractionHelper;
 import org.agmas.noellesroles.voodoo.VoodooPlayerComponent;
@@ -125,6 +130,8 @@ public class RoleTargetMenuScreen extends Screen {
             case MORPHLING -> gameWorld.isRole(this.player, Noellesroles.MORPHLING)
                     && MorphlingPlayerComponent.KEY.get(this.player).getMorphTicks() == 0;
             case FORGED_POTION -> gameWorld.isRole(this.player, Noellesroles.MORPHLING);
+            case PUPPETEER -> gameWorld.isRole(this.player, Noellesroles.PUPPETEER)
+                    && !PuppeteerPlayerComponent.KEY.get(this.player).isControlling();
         };
     }
 
@@ -147,8 +154,10 @@ public class RoleTargetMenuScreen extends Screen {
             }
             case SWAPPER -> {
                 List<UUID> alivePlayers = new ArrayList<>(gameWorld.getAllAlivePlayers());
+                // 场内的傀儡（闲置或被操纵中）以其生前玩家的身份出现在列表里
+                PuppetWorldComponent puppets = PuppetWorldComponent.get(this.player.getWorld());
                 for (UUID uuid : WatheClient.PLAYER_ENTRIES_CACHE.keySet()) {
-                    if (!alivePlayers.contains(uuid)) {
+                    if (!alivePlayers.contains(uuid) && !puppets.isPuppetInWorld(uuid)) {
                         continue;
                     }
                     var targetPlayer = this.player.getWorld().getPlayerByUuid(uuid);
@@ -176,6 +185,14 @@ public class RoleTargetMenuScreen extends Screen {
                     result.add(new TargetEntry(uuid, backgroundType));
                 }
             }
+            case PUPPETEER -> {
+                // 可接管的傀儡：库存中的为工具底色，闲置在场上的为毒药底色
+                for (PuppetRecord record : PuppeteerClient.getAvailablePuppets(this.player)) {
+                    ShopEntry.Type backgroundType = record.getState() == PuppetRecord.State.IDLE
+                            ? ShopEntry.Type.POISON : ShopEntry.Type.TOOL;
+                    result.add(new TargetEntry(record.getSourceUuid(), backgroundType));
+                }
+            }
         }
         return result;
     }
@@ -184,7 +201,7 @@ public class RoleTargetMenuScreen extends Screen {
         return switch (this.menuType) {
             case VOODOO -> Objects.equals(VoodooPlayerComponent.KEY.get(this.player).target, uuid);
             case SWAPPER -> Objects.equals(this.firstSelection, uuid) || Objects.equals(this.secondSelection, uuid);
-            case MORPHLING -> false;
+            case MORPHLING, PUPPETEER -> false;
             case FORGED_POTION -> Objects.equals(ForgedPotionItem.getTarget(getHeldPotion()), uuid);
         };
     }
@@ -211,6 +228,10 @@ public class RoleTargetMenuScreen extends Screen {
             }
             case FORGED_POTION -> {
                 ClientPlayNetworking.send(new ForgedPotionSelectC2SPacket(targetUuid));
+                this.close();
+            }
+            case PUPPETEER -> {
+                ClientPlayNetworking.send(new PuppeteerActionC2SPacket(PuppeteerActionC2SPacket.Action.CONTROL, targetUuid));
                 this.close();
             }
             case SWAPPER -> {
@@ -269,6 +290,7 @@ public class RoleTargetMenuScreen extends Screen {
             case SWAPPER -> Text.translatable("screen.role_target.swapper.subtitle");
             case MORPHLING -> Text.translatable("screen.role_target.morphling.subtitle");
             case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.subtitle");
+            case PUPPETEER -> Text.translatable("screen.role_target.puppeteer.subtitle");
         };
     }
 
@@ -298,7 +320,7 @@ public class RoleTargetMenuScreen extends Screen {
                             RoleScreenHelper.getPlayerName(this.secondSelection, UNKNOWN_PLAYER_TEXT)));
                 }
             }
-            case MORPHLING -> {
+            case MORPHLING, PUPPETEER -> {
             }
             case FORGED_POTION -> {
                 UUID currentTarget = ForgedPotionItem.getTarget(getHeldPotion());
@@ -349,7 +371,8 @@ public class RoleTargetMenuScreen extends Screen {
         VOODOO(0xFF000000 | (Noellesroles.VOODOO.color() & 0x00FFFFFF)),
         SWAPPER(0xFF000000 | (Noellesroles.SWAPPER.color() & 0x00FFFFFF)),
         MORPHLING(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF)),
-        FORGED_POTION(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF));
+        FORGED_POTION(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF)),
+        PUPPETEER(0xFF000000 | (Noellesroles.PUPPETEER.color() & 0x00FFFFFF));
 
         private final int accentColor;
 
@@ -363,6 +386,7 @@ public class RoleTargetMenuScreen extends Screen {
                 case SWAPPER -> Text.translatable("screen.role_target.swapper.title");
                 case MORPHLING -> Text.translatable("screen.role_target.morphling.title");
                 case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.title");
+                case PUPPETEER -> Text.translatable("screen.role_target.puppeteer.title");
             };
         }
 
@@ -372,6 +396,7 @@ public class RoleTargetMenuScreen extends Screen {
                 case SWAPPER -> Text.translatable("screen.role_target.swapper.empty");
                 case MORPHLING -> Text.translatable("screen.role_target.morphling.empty");
                 case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.empty");
+                case PUPPETEER -> Text.translatable("screen.role_target.puppeteer.empty");
             };
         }
     }

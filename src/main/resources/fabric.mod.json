@@ -85,7 +85,9 @@
         "noellesroles:sleeping_pill_plate",
         "noellesroles:bandit",
         "noellesroles:morphling_scramble",
-        "noellesroles:body_forgery"
+        "noellesroles:body_forgery",
+        "noellesroles:puppeteer",
+        "noellesroles:puppets"
       ]
   },
   "mixins": [

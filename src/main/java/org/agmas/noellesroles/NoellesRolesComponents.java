@@ -41,6 +41,8 @@ import org.agmas.noellesroles.dreameater.SleepingPillPlateComponent;
 import org.agmas.noellesroles.economist.EconomistPlayerComponent;
 import org.agmas.noellesroles.junker.JunkerLootWorldComponent;
 import org.agmas.noellesroles.junker.JunkerPlayerComponent;
+import org.agmas.noellesroles.puppeteer.PuppetWorldComponent;
+import org.agmas.noellesroles.puppeteer.PuppeteerPlayerComponent;
 import org.agmas.noellesroles.saint.SaintPlayerComponent;
 import org.agmas.noellesroles.survivalmaster.SurvivalMasterPlayerComponent;
 import org.agmas.noellesroles.toxicologist.AntidotePlateShieldComponent;
@@ -113,6 +115,7 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         registry.beginRegistration(PlayerEntity.class, AntidoteShieldPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(AntidoteShieldPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, DreamEaterPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(DreamEaterPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, BanditPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(BanditPlayerComponent::new);
+        registry.beginRegistration(PlayerEntity.class, PuppeteerPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(PuppeteerPlayerComponent::new);
     }
 
     @Override
@@ -128,5 +131,6 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         worldComponentFactoryRegistry.register(DualRoleSelectionWorldComponent.KEY, DualRoleSelectionWorldComponent::new);
         worldComponentFactoryRegistry.register(AntidotePlateShieldComponent.KEY, AntidotePlateShieldComponent::new);
         worldComponentFactoryRegistry.register(SleepingPillPlateComponent.KEY, SleepingPillPlateComponent::new);
+        worldComponentFactoryRegistry.register(PuppetWorldComponent.KEY, PuppetWorldComponent::new);
     }
 }

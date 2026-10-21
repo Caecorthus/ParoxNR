@@ -1,6 +1,7 @@
 package org.agmas.noellesroles.item;
 
 import dev.doctor4t.wathe.cca.PlayerPoisonComponent;
+import dev.doctor4t.wathe.game.GameConstants;
 import dev.doctor4t.wathe.game.GameFunctions;
 import dev.doctor4t.wathe.record.GameRecordManager;
 import net.minecraft.entity.LivingEntity;
@@ -15,7 +16,9 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.agmas.noellesroles.Noellesroles;
+import org.agmas.noellesroles.entity.PuppetEntity;
 import org.agmas.noellesroles.hallucination.HallucinationDummyInteractionHelper;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
 import org.agmas.noellesroles.hallucination.HallucinationPlayerComponent;
 
 import java.util.List;
@@ -62,6 +65,16 @@ public class PoisonNeedleItem extends Item {
                 return ActionResult.SUCCESS;
             }
 
+            // 傀儡师：闲置傀儡被扎即倒地；本体替身被扎则傀儡师被迫回到本体，毒扎在本体身上
+            if (entity instanceof PuppetEntity puppet) {
+                if (!puppet.isShell()) {
+                    PuppeteerControl.onEntityHit(puppet, user instanceof ServerPlayerEntity serverUser ? serverUser : null,
+                            GameConstants.DeathReasons.POISON);
+                    user.getItemCooldownManager().set(this, USE_COOLDOWN_TICKS);
+                    return ActionResult.SUCCESS;
+                }
+                entity = PuppeteerControl.returnShellOwnerToBody(puppet);
+            }
             if (!(entity instanceof PlayerEntity target)) {
                 return ActionResult.PASS;
             }

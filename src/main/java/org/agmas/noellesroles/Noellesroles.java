@@ -40,9 +40,12 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.block.BedBlock;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
@@ -100,6 +103,13 @@ import org.agmas.noellesroles.packet.MorphC2SPacket;
 import org.agmas.noellesroles.packet.MorphCorpseToggleC2SPacket;
 import org.agmas.noellesroles.packet.OpenForgedPotionSelectS2CPacket;
 import org.agmas.noellesroles.packet.SwapperC2SPacket;
+import org.agmas.noellesroles.packet.PuppeteerActionC2SPacket;
+import org.agmas.noellesroles.entity.PuppetEntity;
+import org.agmas.noellesroles.puppeteer.PuppetRecord;
+import org.agmas.noellesroles.puppeteer.PuppetWorldComponent;
+import org.agmas.noellesroles.puppeteer.PuppeteerControl;
+import org.agmas.noellesroles.puppeteer.PuppeteerPlayerComponent;
+import org.agmas.noellesroles.puppeteer.PuppeteerShopHandler;
 import org.agmas.noellesroles.packet.VultureEatC2SPacket;
 import org.agmas.noellesroles.recaller.RecallerPlayerComponent;
 import org.agmas.noellesroles.voodoo.VoodooPlayerComponent;
@@ -287,6 +297,7 @@ public class Noellesroles implements ModInitializer {
     public static Identifier BREACHER_ID = Identifier.of(MOD_ID, "breacher");
     public static Identifier PHONISM_ID = Identifier.of(MOD_ID, "phonism");
     public static Identifier DREAM_EATER_ID = Identifier.of(MOD_ID, "dream_eater");
+    public static Identifier PUPPETEER_ID = Identifier.of(MOD_ID, "puppeteer");
     public static Identifier SAINT_ID = Identifier.of(MOD_ID, "saint");
     public static Identifier JUNKER_ID = Identifier.of(MOD_ID, "junker");
     public static Identifier WHITE_KNIGHT_ID = Identifier.of(MOD_ID, "white_knight");
@@ -357,6 +368,8 @@ public class Noellesroles implements ModInitializer {
     public static Role PHONISM = WatheRoles.registerRole(new Role(PHONISM_ID, new Color(160, 130, 210).getRGB(), false, true, Role.MoodType.FAKE, Integer.MAX_VALUE, true));
     // 噬梦者角色 - 杀手阵营，标记玩家使其陷入困意，第三次命中后令其在睡梦中死亡
     public static Role DREAM_EATER = WatheRoles.registerRole(new Role(DREAM_EATER_ID, new Color(80, 70, 190).getRGB(), false, true, Role.MoodType.FAKE, Integer.MAX_VALUE, true));
+    // 傀儡师角色 - 杀手阵营，把未化白骨的尸体做成傀儡并操纵它们行动；至少2名杀手时才会出场
+    public static Role PUPPETEER = WatheRoles.registerRole(new Role(PUPPETEER_ID, new Color(46, 150, 140).getRGB(), false, true, Role.MoodType.FAKE, Integer.MAX_VALUE, true, RoleAppearanceCondition.minKillers(2)));
 
 
     public static HashMap<Role, RoleAnnouncementTexts.RoleAnnouncementText> roleRoleAnnouncementTextHashMap = new HashMap<>();
@@ -580,6 +593,7 @@ public class Noellesroles implements ModInitializer {
         ALL_ROLES.add(SERIAL_KILLER); ALL_ROLES.add(SILENCER); ALL_ROLES.add(POISONER);
         ALL_ROLES.add(BANDIT); ALL_ROLES.add(HUNTER); ALL_ROLES.add(COMMANDER);
         ALL_ROLES.add(BREACHER); ALL_ROLES.add(PHONISM); ALL_ROLES.add(DREAM_EATER);
+        ALL_ROLES.add(PUPPETEER);
         ALL_ROLES.add(TIMEKEEPER); ALL_ROLES.add(UNDERCOVER); ALL_ROLES.add(CONDUCTOR);
         ALL_ROLES.add(AWESOME_BINGLUS); ALL_ROLES.add(BARTENDER); ALL_ROLES.add(NOISEMAKER);
         ALL_ROLES.add(VOODOO); ALL_ROLES.add(CORONER); ALL_ROLES.add(RECALLER);
@@ -630,6 +644,7 @@ public class Noellesroles implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(AttendantEditInfoC2SPacket.ID, AttendantEditInfoC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(ServerConfigUpdateC2SPacket.ID, ServerConfigUpdateC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(ForgedPotionSelectC2SPacket.ID, ForgedPotionSelectC2SPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(PuppeteerActionC2SPacket.ID, PuppeteerActionC2SPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(EngineerDoorHighlightS2CPacket.ID, EngineerDoorHighlightS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(FerrymanBodyAgeSyncS2CPacket.ID, FerrymanBodyAgeSyncS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(HallucinationDummyStateS2CPacket.ID, HallucinationDummyStateS2CPacket.CODEC);
@@ -668,6 +683,7 @@ public class Noellesroles implements ModInitializer {
         VoodooShopHandler.register();
         AssassinShopHandler.register();
         DreamEaterShopHandler.register();
+        PuppeteerShopHandler.register();
 
         // 毒师手持毒针时允许攻击玩家
         AllowPlayerPunching.EVENT.register((attacker, victim) ->
@@ -701,6 +717,7 @@ public class Noellesroles implements ModInitializer {
             LooseEndsRadarWorldComponent.KEY.sync(world);
             DeathArenaWorldComponent.KEY.get(world).reset();
             JunkerLootWorldComponent.KEY.get(world).reset();
+            PuppetWorldComponent.KEY.get(world).reset();
             MurderMayhemWorldComponent.KEY.get(world).reset();
             MurderMayhemWorldComponent.KEY.sync(world);
         });
@@ -719,6 +736,8 @@ public class Noellesroles implements ModInitializer {
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
+            // 傀儡师操纵中断线：先回到本体并换回本体物品栏，傀儡留在原地
+            PuppeteerControl.returnToBody(player, false);
             server.execute(() -> {
                 BreacherPlayerComponent.KEY.get(player).reset();
                 DualRoleSelectionWorldComponent dsComp = DualRoleSelectionWorldComponent.KEY.get(player.getWorld());
@@ -878,6 +897,10 @@ public class Noellesroles implements ModInitializer {
         // Master key should drop on death, except for Loose End's starting key
         ShouldDropOnDeath.EVENT.register((stack, victim) -> stack.isOf(ModItems.MASTER_KEY)
                 && !GameWorldComponent.KEY.get(victim.getWorld()).isRole(victim, WatheRoles.LOOSE_END));
+
+        // 傀儡师操纵傀儡时被杀：刀枪等物理伤害由傀儡承受（傀儡倒地、取消本次击杀），
+        // 其余死因先回到本体再按正常流程结算。必须先于其他 BEFORE 逻辑，免得护盾等被白白消耗。
+        KillPlayer.BEFORE.register(PuppeteerControl::handleBeforeKill);
 
         KillPlayer.BEFORE.register(((victim, killer, deathReason) -> {
             GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(victim.getWorld());
@@ -1273,6 +1296,21 @@ public class Noellesroles implements ModInitializer {
             GameRecordManager.recordItemUse(giver, Registries.ITEM.getId(WatheItems.NOTE), target, extra);
             return ActionResult.SUCCESS;
         });
+        // 傀儡 / 本体替身被满蓄力球棒击中：与球棒打玩家相同的判定（Wathe 的球棒击杀只认玩家目标）
+        AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (world.isClient || !(entity instanceof PuppetEntity puppet) || !(player instanceof ServerPlayerEntity attacker)) {
+                return ActionResult.PASS;
+            }
+            if (!GameFunctions.isPlayerPlayingAndAlive(attacker)
+                    || !attacker.getMainHandStack().isOf(WatheItems.BAT)
+                    || attacker.getItemCooldownManager().isCoolingDown(WatheItems.BAT)
+                    || attacker.getAttackCooldownProgress(0.5F) < 1.0F) {
+                return ActionResult.PASS;
+            }
+            attacker.resetLastAttackedTicks();
+            PuppeteerControl.onEntityHit(puppet, attacker, GameConstants.DeathReasons.BAT);
+            return ActionResult.SUCCESS;
+        });
         RoleAssigned.EVENT.register((player, role) -> {
             AbilityPlayerComponent abilityPlayerComponent = (AbilityPlayerComponent) AbilityPlayerComponent.KEY.get(player);
             GameWorldComponent gameWorldComponent = (GameWorldComponent) GameWorldComponent.KEY.get(player.getWorld());
@@ -1437,12 +1475,20 @@ public class Noellesroles implements ModInitializer {
                 BanditPlayerComponent.KEY.get(player).reset();
                 // 强盗开局技能冷却90秒（齐掷飞斧）
                 abilityPlayerComponent.cooldown = GameConstants.getInTicks(1, 30);
+            } else if (role.equals(PUPPETEER)) {
+                // 傀儡师一局最多制造「本局杀手数量」具傀儡
+                PuppeteerPlayerComponent.KEY.get(player).initializeForGame(gameWorldComponent.getAllKillerTeamPlayers().size());
             }
         });
         // 解毒剂预防护：未中毒玩家身上的护盾挡下一次中毒（不消耗投毒方行动，只提示被保护者）
         PlayerPoisoned.BEFORE.register((target, poisonTicks, poisonerUuid) -> {
             if (poisonTicks <= 0) {
                 return PlayerPoisoned.PoisonResult.allow();
+            }
+            // 傀儡形态中毒：傀儡立即倒地，毒不会留到傀儡师身上
+            if (target instanceof ServerPlayerEntity serverTarget
+                    && PuppeteerControl.handlePoisoned(serverTarget, poisonerUuid)) {
+                return PlayerPoisoned.PoisonResult.cancel();
             }
             PlayerPoisonComponent poisonComp = PlayerPoisonComponent.KEY.get(target);
             if (poisonComp.poisonTicks > 0) {
@@ -1500,6 +1546,7 @@ public class Noellesroles implements ModInitializer {
             LooseEndPlayerComponent.KEY.get(player).reset();
             HallucinationPlayerComponent.KEY.get(player).reset();
             BanditPlayerComponent.KEY.get(player).reset();
+            PuppeteerPlayerComponent.KEY.get(player).reset();
             DeathArenaPlayerComponent deathArenaPlayer = DeathArenaPlayerComponent.KEY.get(player);
             if (!deathArenaPlayer.isInArena() && !deathArenaPlayer.isPendingRespawn()) {
                 deathArenaPlayer.reset();
@@ -1556,6 +1603,10 @@ public class Noellesroles implements ModInitializer {
         ShopPurchase.BEFORE.register((player, entry, amount) -> {
             if (SwallowedPlayerComponent.isPlayerSwallowed(player)) {
                 return ShopPurchase.PurchaseResult.deny("shop.error.swallowed");
+            }
+            // 傀儡师本体无法购买，只有傀儡形态能用杀手商店
+            if (PuppeteerShopHandler.isBodyForm(player)) {
+                return ShopPurchase.PurchaseResult.deny(PuppeteerShopHandler.BODY_DENY_KEY);
             }
             String looseEndDenyReason = LooseEndShopHandler.getCooldownDenyReason(player, entry);
             if (looseEndDenyReason != null) {
@@ -1774,6 +1825,8 @@ public class Noellesroles implements ModInitializer {
         // 记录受害者和凶手的匹配
         KillPlayer.AFTER.register((victim, killer, deathReason) -> {
             if (victim instanceof ServerPlayerEntity serverVictim) {
+                // 傀儡师死亡：剩余傀儡全部原地倒地变回尸体
+                PuppeteerControl.collapseAllOwnedBy(serverVictim.getServerWorld(), serverVictim);
                 // 保镖：死亡瞬间立即解除格挡姿态，避免姿态状态残留在观战/幽灵等状态
                 BodyguardPlayerComponent.KEY.get(serverVictim).endStance();
                 HallucinationPlayerComponent hallucinationComponent = HallucinationPlayerComponent.KEY.get(serverVictim);
@@ -1937,6 +1990,27 @@ public class Noellesroles implements ModInitializer {
                 if (gameComponent.isRole(victim, Noellesroles.VOODOO) || gameComponent.isRole(victim, Noellesroles.JUNKER)) {
                     VoodooPlayerComponent voodooPlayerComponent = VoodooPlayerComponent.KEY.get(victim);
                     if (voodooPlayerComponent.target != null && (deathReason != DEATH_REASON_ASSASSINATED || !gameComponent.isRole(voodooPlayerComponent.target, ASSASSIN))) {
+                        // 被绑定的是傀儡（绑定目标为其生前玩家）：10秒后傀儡倒地，傀儡师随之死亡
+                        UUID boundTarget = voodooPlayerComponent.target;
+                        PuppetRecord boundPuppet = victim.getWorld() instanceof ServerWorld puppetCurseWorld
+                                ? PuppetWorldComponent.get(puppetCurseWorld).get(boundTarget) : null;
+                        if (boundPuppet != null && victim.getWorld() instanceof ServerWorld puppetCurseWorld) {
+                            if (boundPuppet.getState() == PuppetRecord.State.CONTROLLED
+                                    && puppetCurseWorld.getPlayerByUuid(boundPuppet.getOwnerUuid()) instanceof ServerPlayerEntity puppeteer) {
+                                puppeteer.networkHandler.sendPacket(new TitleS2CPacket(
+                                        Text.translatable("title.noellesroles.voodoo_curse_imminent")
+                                                .formatted(Formatting.DARK_PURPLE, Formatting.BOLD)
+                                ));
+                                puppeteer.networkHandler.sendPacket(new TitleFadeS2CPacket(10, 70, 10));
+                            }
+                            Scheduler.schedule(() -> {
+                                VoodooPlayerComponent currentComp = VoodooPlayerComponent.KEY.get(victim);
+                                if (!boundTarget.equals(currentComp.target)) {
+                                    return;
+                                }
+                                PuppeteerControl.applyVoodooCurse(puppetCurseWorld, boundTarget, victim);
+                            }, 200);
+                        }
                         ServerPlayerEntity voodooed = (ServerPlayerEntity) victim.getWorld().getPlayerByUuid(voodooPlayerComponent.target);
                         if (voodooed != null) {
                             // 圣徒免疫巫毒魔法：可以成为绑定目标，但不会因此死亡，也不收到任何提示
@@ -2194,6 +2268,10 @@ public class Noellesroles implements ModInitializer {
             }
             HiddenBodiesWorldComponent.KEY.get(world).reset();
             BodyForgeryWorldComponent.KEY.get(world).reset();
+            PuppetWorldComponent.KEY.get(world).reset();
+            if (world instanceof ServerWorld serverWorld) {
+                PuppeteerControl.discardAllEntities(serverWorld);
+            }
             LooseEndsRadarWorldComponent.KEY.get(world).reset();
             LooseEndsRadarWorldComponent.KEY.sync(world);
             AntidotePlateShieldComponent plateShieldComp = AntidotePlateShieldComponent.KEY.get(world);
@@ -2228,6 +2306,7 @@ public class Noellesroles implements ModInitializer {
 
             DeathArenaServerController.resetForNewRound(serverWorld.getServer());
             JunkerLootWorldComponent.KEY.get(serverWorld).reset();
+            PuppetWorldComponent.KEY.get(serverWorld).reset();
 
             if (MurderMayhemHelper.isMurderMayhem(gameComponent.getGameMode())) {
                 MurderMayhemWorldComponent murderMayhemComponent = MurderMayhemWorldComponent.KEY.get(world);
@@ -2828,6 +2907,22 @@ public class Noellesroles implements ModInitializer {
 
             }
         });
+        // 傀儡师：傀儡术 / 操纵 / 切回本体 / 回收
+        ServerPlayNetworking.registerGlobalReceiver(PuppeteerActionC2SPacket.ID, (payload, context) -> {
+            context.server().execute(() -> {
+                ServerPlayerEntity player = context.player();
+                switch (payload.action()) {
+                    case CONVERT -> {
+                        if (payload.target() != null) {
+                            PuppeteerControl.tryConvert(player, payload.target());
+                        }
+                    }
+                    case CONTROL -> PuppeteerControl.tryControl(player, payload.target());
+                    case RETURN -> PuppeteerControl.tryReturn(player, false);
+                    case RECALL -> PuppeteerControl.tryReturn(player, true);
+                }
+            });
+        });
         ServerPlayNetworking.registerGlobalReceiver(JunkerSearchC2SPacket.ID, (payload, context) -> {
             context.server().execute(() ->
                     JunkerSearchHelper.handleSearchRequest(context.player(), payload.playerBody()));
@@ -2840,23 +2935,24 @@ public class Noellesroles implements ModInitializer {
                         if (payload.player2() != null) {
                             if (context.player().getWorld().getPlayerByUuid(payload.player2()) != null) {
 
-                                PlayerEntity player1 = context.player().getWorld().getPlayerByUuid(payload.player());
-                                PlayerEntity player2 = context.player().getWorld().getPlayerByUuid(payload.player2());
+                                // 傀儡（以其生前玩家选中）换的是场内的傀儡；正在操纵傀儡的傀儡师换的是其本体替身
+                                Entity player1 = PuppeteerControl.resolvePositionalTarget(context.player().getServerWorld(), payload.player());
+                                Entity player2 = PuppeteerControl.resolvePositionalTarget(context.player().getServerWorld(), payload.player2());
 
                                 if (player1 == null)
                                     return;
                                 if (player2 == null)
                                     return;
-                                if (SwallowedPlayerComponent.isPlayerSwallowed(player1))
+                                if (player1 instanceof PlayerEntity swapPlayer1 && SwallowedPlayerComponent.isPlayerSwallowed(swapPlayer1))
                                     return;
-                                if (SwallowedPlayerComponent.isPlayerSwallowed(player2))
+                                if (player2 instanceof PlayerEntity swapPlayer2 && SwallowedPlayerComponent.isPlayerSwallowed(swapPlayer2))
                                     return;
 
-                                if (player1.isSleeping()) {
-                                    player1.wakeUp();
+                                if (player1 instanceof LivingEntity living1 && living1.isSleeping()) {
+                                    living1.wakeUp();
                                 }
-                                if (player2.isSleeping()) {
-                                    player2.wakeUp();
+                                if (player2 instanceof LivingEntity living2 && living2.isSleeping()) {
+                                    living2.wakeUp();
                                 }
 
                                 if (player1.hasVehicle()) {
@@ -2890,12 +2986,12 @@ public class Noellesroles implements ModInitializer {
                                     AbilityPlayerComponent abilityPlayerComponent = AbilityPlayerComponent.KEY.get(context.player());
                                     abilityPlayerComponent.cooldown = GameConstants.getInTicks(1, 0);
                                     abilityPlayerComponent.sync();
-                                    if (!player1.isFallFlying()) {
+                                    if (!(player1 instanceof LivingEntity flying1 && flying1.isFallFlying())) {
                                         player1.setVelocity(player1.getVelocity().multiply(1.0, 0.0, 1.0));
                                         player1.setOnGround(true);
                                     }
                                     if (player2.teleport(world1, x1, y1, z1, movementFlags, yaw1, pitch1)) {
-                                        if (!player2.isFallFlying()) {
+                                        if (!(player2 instanceof LivingEntity flying2 && flying2.isFallFlying())) {
                                             player2.setVelocity(player1.getVelocity().multiply(1.0, 0.0, 1.0));
                                             player2.setOnGround(true);
                                         }
@@ -2905,8 +3001,8 @@ public class Noellesroles implements ModInitializer {
                                 if (swapped) {
                                     NbtCompound extra = new NbtCompound();
                                     extra.putString("action", "swap");
-                                    extra.putUuid("target1", player1.getUuid());
-                                    extra.putUuid("target2", player2.getUuid());
+                                    extra.putUuid("target1", payload.player());
+                                    extra.putUuid("target2", payload.player2());
                                     GameRecordManager.putPos(extra, "target1_pos", swappedPos1);
                                     GameRecordManager.putPos(extra, "target2_pos", swappedPos2);
                                     ServerPlayerEntity recordTarget = player1 instanceof ServerPlayerEntity serverTarget ? serverTarget : null;
@@ -3120,10 +3216,12 @@ public class Noellesroles implements ModInitializer {
                     InfectedPlayerComponent infected = InfectedPlayerComponent.KEY.get(player);
                     if (infected.isInfected()) continue;
 
-                    double distance = context.player().squaredDistanceTo(player);
+                    // 傀儡无需也无法感染：正在操纵傀儡的傀儡师只能通过其本体替身被感染
+                    Entity infectAnchor = PuppeteerControl.getBodyAnchor(player);
+                    double distance = context.player().squaredDistanceTo(infectAnchor);
                     if (distance < nearestDistance) {
                         // 检查视线（不能隔墙感染）
-                        if (context.player().canSee(player)) {
+                        if (context.player().canSee(infectAnchor)) {
                             nearestDistance = distance;
                             nearestTarget = player;
                         }
@@ -3326,8 +3424,14 @@ public class Noellesroles implements ModInitializer {
                 abilityPlayerComponent.setCooldown(GameConstants.getInTicks(1, 0));
 
                 // 附近所有玩家都能听到；带时长限制的音效由 playAt 负责到点停掉
-                if (GameFunctions.isPlayerPlayingAndAlive(target) && target.getWorld() instanceof ServerWorld soundWorld) {
-                    sound.playAt(soundWorld, target.getX(), target.getY(), target.getZ());
+                // 目标是场内傀儡时在傀儡处播放，操纵傀儡中的傀儡师则在其本体替身处播放
+                if (target.getWorld() instanceof ServerWorld soundWorld
+                        && (GameFunctions.isPlayerPlayingAndAlive(target)
+                        || PuppetWorldComponent.get(soundWorld).isPuppetInWorld(target.getUuid()))) {
+                    Entity soundAnchor = PuppeteerControl.resolvePositionalTarget(soundWorld, target.getUuid());
+                    if (soundAnchor != null) {
+                        sound.playAt(soundWorld, soundAnchor.getX(), soundAnchor.getY(), soundAnchor.getZ());
+                    }
                 }
 
                 NbtCompound extra = new NbtCompound();
@@ -3510,6 +3614,8 @@ public class Noellesroles implements ModInitializer {
             if (!GameFunctions.isPlayerPlayingAndAlive(target)) return;
             if (!GameFunctions.isPlayerAliveAndSurvival(target)) return;
             if (SwallowedInteractionHelper.blocksPlayerTarget(target)) return;
+            // 傀儡已经是尸体：饕餮无需也无法吞噬傀儡形态的傀儡师
+            if (PuppeteerPlayerComponent.isControllingPuppet(target)) return;
 
             // 验证距离（3格内）
             double distance = taotie.squaredDistanceTo(target);
@@ -4181,6 +4287,31 @@ public class Noellesroles implements ModInitializer {
             return Text.translatable("replay.skill.noellesroles.dream_eater.mark",
                     ReplayGenerator.formatPlayerName(actorUuid, playerInfoCache),
                     ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache));
+        });
+
+        // 傀儡师技能格式化器（傀儡术 / 操纵 / 切回 / 回收 / 傀儡被击倒 / 连带死亡）
+        ReplayRegistry.registerSkillFormatter(PUPPETEER_ID, (event, match, world) -> {
+            var playerInfoCache = ReplayGenerator.getPlayerInfoCache(match);
+            NbtCompound data = event.data();
+            UUID actorUuid = data.containsUuid("actor") ? data.getUuid("actor") : null;
+            if (actorUuid == null) return null;
+            Text actorName = ReplayGenerator.formatPlayerName(actorUuid, playerInfoCache);
+            String action = data.getString("action");
+            if ("chain_death".equals(action)) {
+                return Text.translatable("replay.skill.noellesroles.puppeteer.chain_death", actorName);
+            }
+            UUID puppetUuid = data.containsUuid("target") ? data.getUuid("target") : null;
+            if (puppetUuid == null) return null;
+            Text puppetName = ReplayGenerator.formatPlayerName(puppetUuid, playerInfoCache);
+            return switch (action) {
+                case "convert", "control", "release", "recall" ->
+                        Text.translatable("replay.skill.noellesroles.puppeteer." + action, actorName, puppetName);
+                case "destroyed" -> data.containsUuid("attacker")
+                        ? Text.translatable("replay.skill.noellesroles.puppeteer.destroyed", actorName, puppetName,
+                                ReplayGenerator.formatPlayerName(data.getUuid("attacker"), playerInfoCache))
+                        : Text.translatable("replay.skill.noellesroles.puppeteer.destroyed_unknown", actorName, puppetName);
+                default -> null;
+            };
         });
 
         // 谎言音效师技能格式化器（对某玩家周围施加幻听）
