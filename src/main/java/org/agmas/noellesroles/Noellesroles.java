@@ -167,6 +167,10 @@ import org.agmas.noellesroles.assassin.AssassinPlayerComponent;
 import org.agmas.noellesroles.bandit.BanditPlayerComponent;
 import org.agmas.noellesroles.bandit.BanditSkillHelper;
 import org.agmas.noellesroles.baosang.BaosangPlayerComponent;
+import org.agmas.noellesroles.mengpo.MengPoHelper;
+import org.agmas.noellesroles.mengpo.MengPoPlayerComponent;
+import org.agmas.noellesroles.mengpo.MengPoSoupPlayerComponent;
+import org.agmas.noellesroles.packet.MengPoChoiceC2SPacket;
 import org.agmas.noellesroles.toxicologist.AntidotePlateShieldComponent;
 import org.agmas.noellesroles.toxicologist.AntidoteShieldPlayerComponent;
 import org.agmas.noellesroles.scavenger.HiddenBodiesWorldComponent;
@@ -304,6 +308,7 @@ public class Noellesroles implements ModInitializer {
     public static Identifier ECONOMIST_ID = Identifier.of(MOD_ID, "economist");
     // 报丧角色 - 乘客阵营，有人死亡后延迟公布死讯
     public static Identifier BAOSANG_ID = Identifier.of(MOD_ID, "baosang");
+    public static Identifier MENGPO_ID = Identifier.of(MOD_ID, "mengpo");
     public static final Identifier MURDER_MAYHEM_ID = Identifier.of(MOD_ID, "murder_mayhem");
     public static final dev.doctor4t.wathe.api.GameMode MURDER_MAYHEM =
             WatheGameModes.registerGameMode(MURDER_MAYHEM_ID, new MurderMayhemGameMode(MURDER_MAYHEM_ID));
@@ -406,6 +411,8 @@ public class Noellesroles implements ModInitializer {
     public static Role WHITE_KNIGHT = WatheRoles.registerRole(new Role(WHITE_KNIGHT_ID, new Color(232, 232, 240).getRGB(), true, false, Role.MoodType.REAL, WatheRoles.CIVILIAN.getMaxSprintTime(), false, ctx -> false));
     // 经济学家角色 - 乘客阵营，靠任务赚钱，商店出售可观测他人金币的《经济财报》
     public static Role ECONOMIST = WatheRoles.registerRole(new Role(ECONOMIST_ID, new Color(60, 125, 110).getRGB(), true, false, Role.MoodType.REAL, WatheRoles.CIVILIAN.getMaxSprintTime(), false));
+    // 孟婆角色 - 乘客阵营，开局选择渡人（他人可向其买孟婆汤）或渡己（立即转为随机乘客职业），孟婆汤60秒后令饮者转职，无法捡枪
+    public static Role MENGPO = WatheRoles.registerRole(new Role(MENGPO_ID, new Color(168, 139, 181).getRGB(), true, false, Role.MoodType.REAL, WatheRoles.CIVILIAN.getMaxSprintTime(), false));
 
 
     // 小丑角色 - 中立阵营，被无辜者杀死时获胜
@@ -601,7 +608,7 @@ public class Noellesroles implements ModInitializer {
         ALL_ROLES.add(ATTENDANT); ALL_ROLES.add(BODYGUARD); ALL_ROLES.add(SURVIVAL_MASTER);
         ALL_ROLES.add(ENGINEER); ALL_ROLES.add(RIOT_PATROL); ALL_ROLES.add(ORTHOPEDIST);
         ALL_ROLES.add(SAINT); ALL_ROLES.add(BAOSANG); ALL_ROLES.add(JUNKER);
-        ALL_ROLES.add(WHITE_KNIGHT); ALL_ROLES.add(ECONOMIST);
+        ALL_ROLES.add(WHITE_KNIGHT); ALL_ROLES.add(ECONOMIST); ALL_ROLES.add(MENGPO);
         ALL_ROLES.add(JESTER); ALL_ROLES.add(VULTURE); ALL_ROLES.add(CORRUPT_COP);
         ALL_ROLES.add(GANGSTER_STAR); ALL_ROLES.add(PATHOGEN); ALL_ROLES.add(TAOTIE);
         ALL_ROLES.add(CRIMINAL_REASONER); ALL_ROLES.add(FERRYMAN);
@@ -645,6 +652,7 @@ public class Noellesroles implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ServerConfigUpdateC2SPacket.ID, ServerConfigUpdateC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(ForgedPotionSelectC2SPacket.ID, ForgedPotionSelectC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(PuppeteerActionC2SPacket.ID, PuppeteerActionC2SPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(MengPoChoiceC2SPacket.ID, MengPoChoiceC2SPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(EngineerDoorHighlightS2CPacket.ID, EngineerDoorHighlightS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(FerrymanBodyAgeSyncS2CPacket.ID, FerrymanBodyAgeSyncS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(HallucinationDummyStateS2CPacket.ID, HallucinationDummyStateS2CPacket.CODEC);
@@ -1238,8 +1246,9 @@ public class Noellesroles implements ModInitializer {
             return net.minecraft.util.ActionResult.SUCCESS;
         });
         UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
-            // 客户端返回 PASS 让原版流程正常发包，实际逻辑由服务端执行
-            if (!(player instanceof ServerPlayerEntity giver) || giver.isSpectator()) {
+            // 客户端返回 PASS 让原版流程正常发包，实际逻辑由服务端执行。
+            // 客户端每次右键会先后发送 INTERACT_AT（带命中点）与 INTERACT 两个包，服务端只在后者结算，避免一次右键给出两张纸条
+            if (!(player instanceof ServerPlayerEntity giver) || giver.isSpectator() || hitResult != null) {
                 return ActionResult.PASS;
             }
             if (!(entity instanceof ServerPlayerEntity target) || target.isSpectator() || !target.isSneaking()) {
@@ -1311,6 +1320,9 @@ public class Noellesroles implements ModInitializer {
             PuppeteerControl.onEntityHit(puppet, attacker, GameConstants.DeathReasons.BAT);
             return ActionResult.SUCCESS;
         });
+        // 孟婆（渡人）：其他玩家潜行空手右键孟婆，花 250 金币买一碗孟婆汤
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) ->
+                MengPoHelper.tryBuySoup(player, hand, entity, hitResult));
         RoleAssigned.EVENT.register((player, role) -> {
             AbilityPlayerComponent abilityPlayerComponent = (AbilityPlayerComponent) AbilityPlayerComponent.KEY.get(player);
             GameWorldComponent gameWorldComponent = (GameWorldComponent) GameWorldComponent.KEY.get(player.getWorld());
@@ -1422,9 +1434,12 @@ public class Noellesroles implements ModInitializer {
             } else if (role.equals(JUNKER)) {
                 JunkerPlayerComponent.KEY.get(player).reset();
             } else if (role.equals(SAINT)) {
+                // 圣徒禁止捡枪改由 RoleGunPickupMixin 按当前职业实时判断，转职后即可恢复
                 SaintPlayerComponent saintPlayerComponent = SaintPlayerComponent.KEY.get(player);
                 saintPlayerComponent.reset();
-                gameWorldComponent.addToPreventGunPickup(player);
+            } else if (role.equals(MENGPO)) {
+                // 孟婆开局弹出「渡人 / 渡己」选择，超时默认渡人
+                MengPoPlayerComponent.KEY.get(player).startChoice();
             } else if (role.equals(COMMANDER)) {
                 CommanderPlayerComponent commanderPlayerComponent = CommanderPlayerComponent.KEY.get(player);
                 commanderPlayerComponent.reset();
@@ -1547,6 +1562,8 @@ public class Noellesroles implements ModInitializer {
             HallucinationPlayerComponent.KEY.get(player).reset();
             BanditPlayerComponent.KEY.get(player).reset();
             PuppeteerPlayerComponent.KEY.get(player).reset();
+            MengPoPlayerComponent.KEY.get(player).reset();
+            MengPoSoupPlayerComponent.KEY.get(player).reset();
             DeathArenaPlayerComponent deathArenaPlayer = DeathArenaPlayerComponent.KEY.get(player);
             if (!deathArenaPlayer.isInArena() && !deathArenaPlayer.isPendingRespawn()) {
                 deathArenaPlayer.reset();
@@ -3728,6 +3745,17 @@ public class Noellesroles implements ModInitializer {
                     dsComp.handlePlayerChoice(context.player(), payload.choseSecond());
                     DualRoleSelectionWorldComponent.KEY.sync(context.player().getWorld());
                 }
+            });
+        });
+
+        // 孟婆开局「渡人 / 渡己」选择
+        ServerPlayNetworking.registerGlobalReceiver(MengPoChoiceC2SPacket.ID, (payload, context) -> {
+            context.server().execute(() -> {
+                ServerPlayerEntity player = context.player();
+                if (!GameWorldComponent.KEY.get(player.getWorld()).isRole(player, MENGPO)) return;
+                if (!GameFunctions.isPlayerPlayingAndAlive(player)) return;
+                if (!MengPoPlayerComponent.KEY.get(player).isChoosing()) return;
+                MengPoHelper.applyChoice(player, payload.duji());
             });
         });
 

@@ -122,6 +122,15 @@ public class HunterPlayerComponent implements AutoSyncedComponent, ServerTicking
     }
 
     /**
+     * Unregisters every trap this player owns and returns their UUIDs so the caller can discard the entities.
+     */
+    public List<UUID> takeOwnedTraps() {
+        List<UUID> owned = new ArrayList<>(this.ownedTrapUuids);
+        this.ownedTrapUuids.clear();
+        return owned;
+    }
+
+    /**
      * Removes the oldest trap(s) if the player has reached the max trap limit.
      * Returns the UUIDs that were removed so the caller can discard the entities.
      */

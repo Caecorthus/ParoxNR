@@ -8,6 +8,7 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.text.Text;
 import org.agmas.noellesroles.item.AntidoteItem;
+import org.agmas.noellesroles.item.MengPoSoupItem;
 import org.agmas.noellesroles.item.AdrenalineItem;
 import org.agmas.noellesroles.item.AssassinBookItem;
 import org.agmas.noellesroles.item.AttendantRegisterItem;
@@ -266,6 +267,10 @@ public class ModItems {
     public static final Item SPECIAL_SPICE = register(
             new SpecialSpiceItem(new Item.Settings().maxCount(1)),
             "special_spice"
+    );
+    public static final Item MENGPO_SOUP = register(
+            new MengPoSoupItem(new Item.Settings().maxCount(1)),
+            "mengpo_soup"
     );
 
     public static Item register(Item item, String id) {

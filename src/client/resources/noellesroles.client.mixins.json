@@ -28,6 +28,8 @@
     "jester.JesterHudMixin",
     "economist.EconomistMoneyHudMixin",
     "junker.JunkerBodyPromptMixin",
+    "mengpo.MengPoHudMixin",
+    "mengpo.MengPoSoupFovMixin",
     "junker.JunkerHudMixin",
     "looseend.LooseEndOpeningPhaseClientWorldSoundMixin",
     "looseend.LooseEndOpeningPhaseHudMixin",

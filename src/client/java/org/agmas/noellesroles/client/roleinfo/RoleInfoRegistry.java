@@ -513,6 +513,14 @@ public class RoleInfoRegistry {
                 .addShopSkill("shop")
                 .addItemEffectSkill("economic_report"));
 
+        // 孟婆
+        m.put("noellesroles:mengpo", r("mengpo")
+                .addSharedNamedPassiveSkill("passenger", "shared.name.passenger") // 孟婆不能捡枪，不用通用乘客说明
+                .addRoundStartSkill("choice")
+                .addPassiveSkill("sell_soup")
+                .addItemEffectSkill("soup")
+                .addPassiveSkill("no_gun"));
+
         // 白骑士
         m.put("noellesroles:white_knight", r("white_knight")
                 .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")

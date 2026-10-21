@@ -47,6 +47,7 @@
     "riotpatrol.PlayerAttackMixin",
     "junker.GameRecordManagerJunkerMixin",
     "junker.LivingEntityJunkerUseMixin",
+    "mengpo.RoleGunPickupMixin",
     "saint.SaintAttackBlockMixin",
     "saint.SaintInteractionBlockMixin",
     "saint.SaintItemUseMixin",

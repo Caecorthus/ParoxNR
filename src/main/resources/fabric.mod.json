@@ -87,7 +87,9 @@
         "noellesroles:morphling_scramble",
         "noellesroles:body_forgery",
         "noellesroles:puppeteer",
-        "noellesroles:puppets"
+        "noellesroles:puppets",
+        "noellesroles:mengpo",
+        "noellesroles:mengpo_soup"
       ]
   },
   "mixins": [

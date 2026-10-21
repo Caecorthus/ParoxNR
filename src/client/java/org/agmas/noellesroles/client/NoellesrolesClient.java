@@ -64,6 +64,7 @@ import org.agmas.noellesroles.client.screen.RoleInfoLegacyScreen;
 import org.agmas.noellesroles.client.screen.RoleInfoScreen;
 import org.agmas.noellesroles.client.screen.RoleTargetMenuScreen;
 import org.agmas.noellesroles.client.puppeteer.PuppeteerClient;
+import org.agmas.noellesroles.client.screen.MengPoChoiceScreen;
 import org.agmas.noellesroles.client.screen.NoellesRolesConfigScreen;
 import org.agmas.noellesroles.client.screen.SpectatorAssistPanelScreen;
 import org.agmas.noellesroles.util.HiddenEquipmentHelper;
@@ -361,6 +362,12 @@ public class NoellesrolesClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> LooseEndsRadarHudRenderer.tick());
         ClientTickEvents.END_CLIENT_TICK.register(client -> EconomistClientState.tick());
+        // 孟婆开局选择：处于选择中且没有其它界面时自动弹出（也覆盖重连后界面丢失的情况）
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.currentScreen == null && MengPoChoiceScreen.isChoosing(client.player)) {
+                client.setScreen(new MengPoChoiceScreen());
+            }
+        });
 
         // 注册 CanSeeBodyRole 监听器：高理智的验尸官查看尸体时可获得完整验尸信息
         CanSeeBodyRole.EVENT.register(viewer -> {

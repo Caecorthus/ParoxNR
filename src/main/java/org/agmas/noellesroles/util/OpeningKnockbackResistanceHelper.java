@@ -40,6 +40,11 @@ public final class OpeningKnockbackResistanceHelper {
         applyResistance(player);
     }
 
+    /** 玩家是否仍处于开局窗口（开局刀冷却尚未结束、仍带击退抗性）。 */
+    public static boolean isInOpeningWindow(PlayerEntity player) {
+        return openingCooldownPlayers.contains(player.getUuid());
+    }
+
     /** 每 tick 检查开局冷却是否结束；结束后移除抗性，死亡重生等丢失修饰符时补回。 */
     public static void tick(MinecraftServer server) {
         if (openingCooldownPlayers.isEmpty()) {

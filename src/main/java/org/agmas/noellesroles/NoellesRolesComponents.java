@@ -8,6 +8,8 @@ import org.agmas.noellesroles.assassin.AssassinPlayerComponent;
 import org.agmas.noellesroles.attendant.AttendantPlayerComponent;
 import org.agmas.noellesroles.bandit.BanditPlayerComponent;
 import org.agmas.noellesroles.baosang.BaosangPlayerComponent;
+import org.agmas.noellesroles.mengpo.MengPoPlayerComponent;
+import org.agmas.noellesroles.mengpo.MengPoSoupPlayerComponent;
 import org.agmas.noellesroles.bartender.BartenderPlayerComponent;
 import org.agmas.noellesroles.jester.JesterPlayerComponent;
 import org.agmas.noellesroles.pathogen.InfectedPlayerComponent;
@@ -116,6 +118,8 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         registry.beginRegistration(PlayerEntity.class, DreamEaterPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(DreamEaterPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, BanditPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(BanditPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, PuppeteerPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(PuppeteerPlayerComponent::new);
+        registry.beginRegistration(PlayerEntity.class, MengPoPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(MengPoPlayerComponent::new);
+        registry.beginRegistration(PlayerEntity.class, MengPoSoupPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(MengPoSoupPlayerComponent::new);
     }
 
     @Override
