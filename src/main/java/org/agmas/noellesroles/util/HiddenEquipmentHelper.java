@@ -47,6 +47,10 @@ public final class HiddenEquipmentHelper {
         if (stack.isOf(ModItems.HALLUCINATION_MEDICINE)) return true;
         if (stack.isOf(ModItems.IRON_MAN_VIAL)) return true;
         if (stack.isOf(ModItems.VOODOO_DOLL)) return true;
+        if (stack.isOf(ModItems.SILENCE_DEVICE)) return true;
+        if (stack.isOf(ModItems.RECALLER_ANCHOR)) return true;
+        if (stack.isOf(ModItems.REWIND_SHARD)) return true;
+        if (stack.isOf(ModItems.SOUND_COLLECTOR)) return true;
         if (stack.isOf(ModItems.ATTENDANT_REGISTER)) return true;
         if (stack.isOf(WatheItems.WALKIE_TALKIE)) return true;
         if (stack.isOf(Items.WRITTEN_BOOK)) return true;

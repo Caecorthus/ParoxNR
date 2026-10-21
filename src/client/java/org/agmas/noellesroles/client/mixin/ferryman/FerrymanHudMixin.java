@@ -11,6 +11,7 @@ import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.util.HudRenderHelper;
+import org.agmas.noellesroles.client.util.rolehud.FerrymanHudRenderer;
 import org.agmas.noellesroles.ferryman.FerrymanPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -84,7 +85,11 @@ public abstract class FerrymanHudMixin {
         }
 
         int drawY = context.getScaledWindowHeight();
-        HudRenderHelper.drawBottomRight(context, getTextRenderer(), line, drawY, Noellesroles.FERRYMAN.color());
+        drawY = HudRenderHelper.drawBottomRight(context, getTextRenderer(), line, drawY, Noellesroles.FERRYMAN.color());
+        if (FerrymanHudRenderer.canPromptPreserve(player, ferryman, ability)) {
+            Text preserveLine = Text.translatable("tip.ferryman.preserve", NoellesrolesClient.ability2Bind.getBoundKeyLocalizedText());
+            HudRenderHelper.drawBottomRight(context, getTextRenderer(), preserveLine, drawY, Noellesroles.FERRYMAN.color());
+        }
 
         if (ferryman.isReactionActive()) {
             noellesroles$renderReactionParticles(context, System.currentTimeMillis());

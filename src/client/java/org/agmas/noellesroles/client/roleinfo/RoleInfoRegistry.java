@@ -321,7 +321,8 @@ public class RoleInfoRegistry {
         m.put("noellesroles:silencer", r("silencer")
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use") // 本能
                 .addSkillWithSharedNameAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.trigger.inventory_open") // 商店
-                .addActiveUseSkill("silence", "ability")); // 沉默目标
+                .addActiveUseSkill("silence", "ability") // 沉默目标
+                .addShopSkill("silence_device")); // 寂静装置（商店购买）
 
         // 毒师
         m.put("noellesroles:poisoner", r("poisoner")
@@ -351,12 +352,15 @@ public class RoleInfoRegistry {
         m.put("noellesroles:breacher", r("breacher")
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use")
                 .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open")
-                .addActiveUseSkill("create_break_point", "ability"));
+                .addActiveUseSkill("create_break_point", "ability")
+                .addPassiveSkill("break_point_income")
+                .addPassiveSkill("break_point_repair"));
 
         m.put("noellesroles:phonism", r("phonism")
                 .addSkillWithSharedNameEffectAndTrigger("instinct", "instinct", "shared.name.killer_instinct", "shared.effect.killer_instinct", "shared.trigger.hold_use")
                 .addSkillWithSharedNameEffectAndTrigger("shop", "inventory", "shared.name.killer_shop", "shared.effect.killer_shop", "shared.trigger.inventory_open")
-                .addActiveUseSkill("hallucinate", "ability"));
+                .addActiveUseSkill("hallucinate", "ability")
+                .addShopSkill("sound_collector")); // 声音收集器（商店购买）
 
         // 噬梦者
         m.put("noellesroles:dream_eater", r("dream_eater")
@@ -403,7 +407,8 @@ public class RoleInfoRegistry {
         m.put("noellesroles:recaller", r("recaller")
                 .addSharedNamedPassiveSkillWithSharedEffect("passenger", "shared.name.passenger", "shared.effect.passenger")
                 .addPassiveSkill("earn_money") // 赚钱
-                .addActiveUseSkill("teleport", "ability")); // 传送回标记点
+                .addShopSkill("anchor") // 锚点（商店购买）
+                .addShopSkill("rewind_shard")); // 回溯碎片（商店购买）
 
         // 计时员
         m.put("noellesroles:time_keeper", r("time_keeper")
@@ -566,6 +571,7 @@ public class RoleInfoRegistry {
                 .addSharedNamedHoldUseSkill("neutral", "instinct", "shared.name.neutral")
                 .addSkillWithSharedNameEffectAndTrigger("neutral_master_key", null, "shared.name.neutral_master_key", "shared.effect.neutral_master_key", "shared.trigger.initial_item")
                 .addActiveUseSkill("ferry", "ability")
+                .addActiveUseSkill("preserve", "ability2")
                 .addSkill("netherwalker", "ability"));
 
         return m;

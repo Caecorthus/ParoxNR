@@ -10,11 +10,11 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
-import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.phonism.PhonismSoundWidget;
 import org.agmas.noellesroles.client.phonism.PhonismTargetWidget;
 import org.agmas.noellesroles.client.screen.RoleScreenHelper.InteractionBlocker;
+import org.agmas.noellesroles.phonism.PhonismPlayerComponent;
 import org.agmas.noellesroles.phonism.PhonismSound;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.SwallowedInteractionHelper;
@@ -65,13 +65,11 @@ public class PhonismScreen extends Screen {
         targetCloseButton = null;
 
         GameWorldComponent gameWorld = GameWorldComponent.KEY.get(player.getWorld());
-        AbilityPlayerComponent abilityComp = AbilityPlayerComponent.KEY.get(player);
 
-        // 基础检查
+        // 基础检查：面板随时可开（存活、未被吞噬即可），可用性由各音效按钮自己的冷却控制
         if (!gameWorld.isRole(player, Noellesroles.PHONISM) ||
                 !GameFunctions.isPlayerPlayingAndAlive(player) ||
-                SwallowedPlayerComponent.isPlayerSwallowed(player) ||
-                abilityComp.getCooldown() > 0) {
+                SwallowedPlayerComponent.isPlayerSwallowed(player)) {
             this.close();
             return;
         }
@@ -87,8 +85,8 @@ public class PhonismScreen extends Screen {
                     .build();
             addDrawableChild(targetCloseButton);
 
-            // 死亡玩家同样可选，因此这里用全部玩家而不是存活玩家
-            List<UUID> validPlayers = new ArrayList<>(gameWorld.getAllPlayers());
+            // 只可选存活玩家（死亡目标会被服务端拒绝且不扣冷却，面板不再展示）
+            List<UUID> validPlayers = new ArrayList<>(gameWorld.getAllAlivePlayers());
             validPlayers.remove(player.getUuid());
             List<UUID> targets = new ArrayList<>();
             for (UUID uuid : WatheClient.PLAYER_ENTRIES_CACHE.keySet()) {
@@ -139,6 +137,7 @@ public class PhonismScreen extends Screen {
         } else {
             // === 阶段2：选择幻听内容 ===
 
+            PhonismPlayerComponent soundCooldowns = PhonismPlayerComponent.KEY.get(player);
             PhonismSound[] sounds = PhonismSound.values();
             int rows = (int) Math.ceil((double) sounds.length / SOUND_COLUMNS);
             int totalW = SOUND_COLUMNS * PhonismSoundWidget.WIDTH + (SOUND_COLUMNS - 1) * SOUND_GAP_X;
@@ -160,6 +159,7 @@ public class PhonismScreen extends Screen {
                         soundListBaseY + row * (PhonismSoundWidget.HEIGHT + SOUND_GAP_Y),
                         sounds[i],
                         selectedTarget,
+                        soundCooldowns,
                         0, soundViewportTop, this.width, soundViewportBottom
                 );
                 soundWidgets.add(widget);

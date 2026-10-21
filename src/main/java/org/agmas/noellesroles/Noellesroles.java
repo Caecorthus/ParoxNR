@@ -95,13 +95,21 @@ import org.agmas.noellesroles.packet.DeathArenaToggleC2SPacket;
 import org.agmas.noellesroles.packet.EngineerDoorHighlightS2CPacket;
 import org.agmas.noellesroles.packet.PhonismC2SPacket;
 import org.agmas.noellesroles.packet.FerrymanBodyAgeSyncS2CPacket;
+import org.agmas.noellesroles.packet.FerrymanPreserveC2SPacket;
+import org.agmas.noellesroles.packet.FerrymanWaxParticlesS2CPacket;
 import org.agmas.noellesroles.packet.ForgedPotionSelectC2SPacket;
 import org.agmas.noellesroles.packet.MorphC2SPacket;
 import org.agmas.noellesroles.packet.MorphCorpseToggleC2SPacket;
 import org.agmas.noellesroles.packet.OpenForgedPotionSelectS2CPacket;
+import org.agmas.noellesroles.packet.OpeningKnockbackSuppressS2CPacket;
+import org.agmas.noellesroles.packet.SchulteClickC2SPacket;
+import org.agmas.noellesroles.packet.SchulteExitC2SPacket;
+import org.agmas.noellesroles.packet.SchulteResultS2CPacket;
+import org.agmas.noellesroles.packet.SchulteStartS2CPacket;
 import org.agmas.noellesroles.packet.SwapperC2SPacket;
 import org.agmas.noellesroles.packet.VultureEatC2SPacket;
-import org.agmas.noellesroles.recaller.RecallerPlayerComponent;
+import org.agmas.noellesroles.recaller.RecallerAnchorInteractHandler;
+import org.agmas.noellesroles.recaller.RecallerShopHandler;
 import org.agmas.noellesroles.voodoo.VoodooPlayerComponent;
 import org.agmas.noellesroles.voodoo.VoodooHelper;
 import org.agmas.noellesroles.voodoo.VoodooShopHandler;
@@ -126,11 +134,16 @@ import org.agmas.noellesroles.orthopedist.OrthopedistPlayerComponent;
 import org.agmas.noellesroles.commander.CommanderPlayerComponent;
 import org.agmas.noellesroles.attendant.AttendantPlayerComponent;
 import org.agmas.noellesroles.breacher.BreacherPlayerComponent;
+import org.agmas.noellesroles.breacher.BreacherRepairHandler;
+import org.agmas.noellesroles.breacher.BreacherShopHandler;
+import org.agmas.noellesroles.breacher.BreacherWorldComponent;
 import org.agmas.noellesroles.dreameater.DreamEaterKillRewardHelper;
 import org.agmas.noellesroles.dreameater.DreamEaterPlayerComponent;
 import org.agmas.noellesroles.dreameater.DreamEaterShopHandler;
 import org.agmas.noellesroles.dreameater.SleepingPillHelper;
 import org.agmas.noellesroles.dreameater.SleepingPillPlateComponent;
+import org.agmas.noellesroles.phonism.PhonismPlayerComponent;
+import org.agmas.noellesroles.phonism.PhonismShopHandler;
 import org.agmas.noellesroles.phonism.PhonismSound;
 import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
 import org.agmas.noellesroles.packet.DualRoleChoiceC2SPacket;
@@ -181,7 +194,11 @@ import org.agmas.noellesroles.taotie.TaotiePlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.task.NoellesTaskTypes;
 import org.agmas.noellesroles.packet.TaotieSwallowC2SPacket;
+import org.agmas.noellesroles.packet.OpenSilenceZonePanelS2CPacket;
+import org.agmas.noellesroles.packet.SilenceZoneUseC2SPacket;
 import org.agmas.noellesroles.packet.SilencerSilenceC2SPacket;
+import org.agmas.noellesroles.item.SilenceDeviceItem;
+import org.agmas.noellesroles.silencer.SilenceZonePlayerComponent;
 import org.agmas.noellesroles.silencer.SilencedPlayerComponent;
 import org.agmas.noellesroles.silencer.SilencerPlayerComponent;
 import org.agmas.noellesroles.bodyguard.BodyguardPlayerComponent;
@@ -191,6 +208,7 @@ import org.agmas.noellesroles.packet.CriminalReasonerReasonC2SPacket;
 import org.agmas.noellesroles.engineer.EngineerPlayerComponent;
 import org.agmas.noellesroles.ferryman.FerrymanHelper;
 import org.agmas.noellesroles.ferryman.FerrymanPlayerComponent;
+import org.agmas.noellesroles.ferryman.FerrymanPreserveWorldComponent;
 import org.agmas.noellesroles.gangsterstar.GangsterStarPlayerComponent;
 import org.agmas.noellesroles.gangsterstar.GangsterStarShopHandler;
 import org.agmas.noellesroles.hallucination.HallucinationEffectId;
@@ -209,8 +227,9 @@ import org.agmas.noellesroles.packet.HallucinationDummyUseC2SPacket;
 import org.agmas.noellesroles.packet.HallucinationDummyStateS2CPacket;
 import org.agmas.noellesroles.packet.HallucinationSoundS2CPacket;
 import org.agmas.noellesroles.util.BodyTargetHelper;
+import org.agmas.noellesroles.util.ForcedRoleTracker;
 import org.agmas.noellesroles.util.MisKillGunCooldownHelper;
-import org.agmas.noellesroles.util.OpeningKnockbackResistanceHelper;
+import org.agmas.noellesroles.util.OpeningKnockbackSuppressionHelper;
 import org.agmas.noellesroles.util.PassengerDeathCompensationHelper;
 import org.agmas.noellesroles.util.RoleUtils;
 import org.agmas.noellesroles.util.SpectatorStateHelper;
@@ -406,7 +425,7 @@ public class Noellesroles implements ModInitializer {
     public static Role TAOTIE = WatheRoles.registerRole(new Role(TAOTIE_ID, new Color(139, 69, 19).getRGB(), false, false, Role.MoodType.FAKE, Integer.MAX_VALUE, false));
     // 犯罪推理学家角色 - 中立阵营，将死者与凶手正确匹配获胜
     public static Role CRIMINAL_REASONER = WatheRoles.registerRole(new Role(CRIMINAL_REASONER_ID, new Color(112, 75, 75).getRGB(), false, false, Role.MoodType.FAKE, WatheRoles.CIVILIAN.getMaxSprintTime(), false));
-    public static Role FERRYMAN = WatheRoles.registerRole(new Role(FERRYMAN_ID, new Color(129, 170, 196).getRGB(), false, false, Role.MoodType.FAKE, WatheRoles.CIVILIAN.getMaxSprintTime(), false, FerrymanHelper::canSpawn));
+    public static Role FERRYMAN = WatheRoles.registerRole(new Role(FERRYMAN_ID, new Color(129, 170, 196).getRGB(), false, false, Role.MoodType.FAKE, Integer.MAX_VALUE, false, FerrymanHelper::canSpawn));
 
     // All registered custom roles for dual role selection iteration
     public static final List<Role> ALL_ROLES = new ArrayList<>();
@@ -618,6 +637,7 @@ public class Noellesroles implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(CriminalReasonerInvisibilityC2SPacket.ID, CriminalReasonerInvisibilityC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(TaotieSwallowC2SPacket.ID, TaotieSwallowC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(SilencerSilenceC2SPacket.ID, SilencerSilenceC2SPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(SilenceZoneUseC2SPacket.ID, SilenceZoneUseC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(SpectatorInfoRequestC2SPacket.ID, SpectatorInfoRequestC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(SpectatorReplayDetailRequestC2SPacket.ID, SpectatorReplayDetailRequestC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(SpectatorAssistTeleportC2SPacket.ID, SpectatorAssistTeleportC2SPacket.CODEC);
@@ -626,11 +646,16 @@ public class Noellesroles implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(HallucinationDummyUseC2SPacket.ID, HallucinationDummyUseC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(DualRoleChoiceC2SPacket.ID, DualRoleChoiceC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(JunkerSearchC2SPacket.ID, JunkerSearchC2SPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(FerrymanPreserveC2SPacket.ID, FerrymanPreserveC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(AttendantEditInfoC2SPacket.ID, AttendantEditInfoC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(ServerConfigUpdateC2SPacket.ID, ServerConfigUpdateC2SPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(ForgedPotionSelectC2SPacket.ID, ForgedPotionSelectC2SPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(SchulteClickC2SPacket.ID, SchulteClickC2SPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(SchulteExitC2SPacket.ID, SchulteExitC2SPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(EngineerDoorHighlightS2CPacket.ID, EngineerDoorHighlightS2CPacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpeningKnockbackSuppressS2CPacket.ID, OpeningKnockbackSuppressS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(FerrymanBodyAgeSyncS2CPacket.ID, FerrymanBodyAgeSyncS2CPacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(FerrymanWaxParticlesS2CPacket.ID, FerrymanWaxParticlesS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(HallucinationDummyStateS2CPacket.ID, HallucinationDummyStateS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(HallucinationSoundS2CPacket.ID, HallucinationSoundS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(RoleBroadcastS2CPacket.ID, RoleBroadcastS2CPacket.CODEC);
@@ -640,8 +665,11 @@ public class Noellesroles implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EconomistReportS2CPacket.ID, EconomistReportS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenVoodooPanelS2CPacket.ID, OpenVoodooPanelS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenAssassinBookPanelS2CPacket.ID, OpenAssassinBookPanelS2CPacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenSilenceZonePanelS2CPacket.ID, OpenSilenceZonePanelS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenAttendantRegisterS2CPacket.ID, OpenAttendantRegisterS2CPacket.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenForgedPotionSelectS2CPacket.ID, OpenForgedPotionSelectS2CPacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(SchulteStartS2CPacket.ID, SchulteStartS2CPacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(SchulteResultS2CPacket.ID, SchulteResultS2CPacket.CODEC);
 
         // 拾荒者：搜刮所得物品使用生效后销毁
         JunkerLootDestroyHandler.register();
@@ -667,11 +695,17 @@ public class Noellesroles implements ModInitializer {
         VoodooShopHandler.register();
         AssassinShopHandler.register();
         DreamEaterShopHandler.register();
+        BreacherShopHandler.register();
+        PhonismShopHandler.register();
+        BreacherRepairHandler.register();
+        RecallerShopHandler.register();
+        RecallerAnchorInteractHandler.register();
 
-        // 毒师手持毒针时允许攻击玩家
+        // 毒师手持毒针时允许攻击玩家（开局压制窗口内禁止出拳放行）
         AllowPlayerPunching.EVENT.register((attacker, victim) ->
-                attacker.getMainHandStack().isOf(ModItems.POISON_NEEDLE)
-                        || attacker.getMainHandStack().isOf(ModItems.RIOT_SHIELD)
+                !OpeningKnockbackSuppressionHelper.isSuppressed(attacker)
+                        && (attacker.getMainHandStack().isOf(ModItems.POISON_NEEDLE)
+                                || attacker.getMainHandStack().isOf(ModItems.RIOT_SHIELD))
         );
 
         // 注册职业聊天处理器（大嗓门广播、饕餮肚子、静语者拦截）
@@ -877,6 +911,9 @@ public class Noellesroles implements ModInitializer {
         // Master key should drop on death, except for Loose End's starting key
         ShouldDropOnDeath.EVENT.register((stack, victim) -> stack.isOf(ModItems.MASTER_KEY)
                 && !GameWorldComponent.KEY.get(victim.getWorld()).isRole(victim, WatheRoles.LOOSE_END));
+
+        // 回溯碎片死亡掉落，任何玩家可拾取（Wathe 掉落 retainOwnership=false → 无主人；锚点物品不掉落）
+        ShouldDropOnDeath.EVENT.register((stack, victim) -> stack.isOf(ModItems.REWIND_SHARD));
 
         KillPlayer.BEFORE.register(((victim, killer, deathReason) -> {
             GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(victim.getWorld());
@@ -1272,6 +1309,37 @@ public class Noellesroles implements ModInitializer {
             GameRecordManager.recordItemUse(giver, Registries.ITEM.getId(WatheItems.NOTE), target, extra);
             return ActionResult.SUCCESS;
         });
+        // 声音收集器回收：仅音效师本人空手右键收集器持有者或其尸体可回收（回收后可换装他人）
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+            if (hand != Hand.MAIN_HAND) return ActionResult.PASS;
+            if (!(player instanceof ServerPlayerEntity giver) || giver.isSpectator()) return ActionResult.PASS;
+            if (!giver.getStackInHand(hand).isEmpty()) return ActionResult.PASS;
+            if (!GameFunctions.isPlayerPlayingAndAlive(giver)) return ActionResult.PASS;
+            if (SwallowedPlayerComponent.isPlayerSwallowed(giver)) return ActionResult.PASS;
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(world);
+            if (!gameWorldComponent.isRole(giver, PHONISM)) return ActionResult.PASS;
+            PhonismPlayerComponent phonismComponent = PhonismPlayerComponent.KEY.get(giver);
+            UUID collectorTarget = phonismComponent.getCollectorTarget();
+            if (collectorTarget == null) return ActionResult.PASS;
+
+            boolean matched = switch (entity) {
+                case ServerPlayerEntity holder -> holder.getUuid().equals(collectorTarget);
+                case PlayerBodyEntity body -> collectorTarget.equals(body.getPlayerUuid());
+                case null, default -> false;
+            };
+            if (!matched) return ActionResult.PASS;
+
+            phonismComponent.recoverCollector();
+            giver.swingHand(hand);
+            giver.sendMessage(Text.translatable("tip.phonism.collector_recovered"), true);
+
+            NbtCompound extra = new NbtCompound();
+            extra.putString("action", "collector_recover");
+            extra.putUuid("target", collectorTarget);
+            GameRecordManager.recordSkillUse(giver, PHONISM_ID,
+                    entity instanceof ServerPlayerEntity serverTarget ? serverTarget : null, extra);
+            return ActionResult.SUCCESS;
+        });
         RoleAssigned.EVENT.register((player, role) -> {
             AbilityPlayerComponent abilityPlayerComponent = (AbilityPlayerComponent) AbilityPlayerComponent.KEY.get(player);
             GameWorldComponent gameWorldComponent = (GameWorldComponent) GameWorldComponent.KEY.get(player.getWorld());
@@ -1407,10 +1475,13 @@ public class Noellesroles implements ModInitializer {
                 // 静语者开局冷却45秒
                 abilityPlayerComponent.cooldown = GameConstants.getInTicks(0, 45);
             } else if (role.equals(BREACHER)) {
-                BreacherPlayerComponent.KEY.get(player).setCooldownTicks(GameConstants.getInTicks(1, 0));
+                // 破袭者开局冷却与技能 CD 一致：固定 90 秒
+                BreacherPlayerComponent.KEY.get(player).setCooldownTicks(BreacherPlayerComponent.SKILL_COOLDOWN_TICKS);
             } else if (role.equals(PHONISM)) {
-                // 谎言音效师开局冷却45秒
-                abilityPlayerComponent.cooldown = GameConstants.getInTicks(0, 45);
+                // 谎言音效师：各音效独立冷却，开局全部设为 10 秒
+                PhonismPlayerComponent phonismComponent = PhonismPlayerComponent.KEY.get(player);
+                phonismComponent.reset();
+                phonismComponent.setAllSoundCooldowns(GameConstants.getInTicks(0, 10));
             } else if (role.equals(UNDERCOVER)) {
                 player.giveItemStack(WatheItems.WALKIE_TALKIE.getDefaultStack());
             } else if (role.equals(BODYGUARD)) {
@@ -1463,11 +1534,11 @@ public class Noellesroles implements ModInitializer {
             MorphlingPlayerComponent.KEY.get(player).reset();
             MorphlingScramblePlayerComponent.KEY.get(player).reset();
             VoodooPlayerComponent.KEY.get(player).reset();
-            RecallerPlayerComponent.KEY.get(player).reset();
             VulturePlayerComponent.KEY.get(player).reset();
             JesterPlayerComponent.KEY.get(player).reset();
             InfectedPlayerComponent.KEY.get(player).reset();
             PathogenPlayerComponent.KEY.get(player).reset();
+            PhonismPlayerComponent.KEY.get(player).reset();
             BomberPlayerComponent.KEY.get(player).reset();
             AssassinPlayerComponent.KEY.get(player).reset();
             CriminalReasonerPlayerComponent.KEY.get(player).reset();
@@ -1482,6 +1553,7 @@ public class Noellesroles implements ModInitializer {
             SwallowedPlayerComponent.KEY.get(player).reset();
             SilencedPlayerComponent.KEY.get(player).reset();
             SilencerPlayerComponent.KEY.get(player).reset();
+            SilenceZonePlayerComponent.KEY.get(player).reset();
             BodyguardPlayerComponent.KEY.get(player).reset();
             NoisemakerPlayerComponent.KEY.get(player).reset();
             SurvivalMasterPlayerComponent.KEY.get(player).reset();
@@ -1571,6 +1643,10 @@ public class Noellesroles implements ModInitializer {
             String voodooDenyReason = VoodooShopHandler.getDuplicateDenyReason(player, entry);
             if (voodooDenyReason != null) {
                 return ShopPurchase.PurchaseResult.deny(voodooDenyReason);
+            }
+            String anchorDenyReason = RecallerShopHandler.getAnchorDenyReason(player, entry);
+            if (anchorDenyReason != null) {
+                return ShopPurchase.PurchaseResult.deny(anchorDenyReason);
             }
             return ShopPurchase.PurchaseResult.allow();
         });
@@ -2095,6 +2171,13 @@ public class Noellesroles implements ModInitializer {
             DoorInteraction.DoorType doorType = context.getDoorType();
             if (handItem.isOf(ModItems.MASTER_KEY)) {
                 if (doorType == DoorInteraction.DoorType.TRAIN_DOOR || context.requiresKey()) {
+                    // 万能钥匙开门：播放与房间钥匙同款的钥匙音效（仅服务端播一次，中立万能钥匙不播）
+                    if (context.isServerSide()) {
+                        context.getWorld().playSound(null,
+                                context.getLowerPos().getX() + .5f, context.getLowerPos().getY() + 1,
+                                context.getLowerPos().getZ() + .5f,
+                                WatheSounds.ITEM_KEY_DOOR, SoundCategory.BLOCKS, 1f, 1f);
+                    }
                     return DoorInteraction.DoorInteractionResult.ALLOW;
                 }
             }
@@ -2173,6 +2256,7 @@ public class Noellesroles implements ModInitializer {
 
         // 游戏结束时触发
         GameEvents.ON_FINISH_FINALIZE.register((world, gameComponent) -> {
+            ForcedRoleTracker.clear(); // 清理本局 forceRole 指定记录，防止跨局残留
             MurderMayhemWorldComponent murderMayhemComponent = MurderMayhemWorldComponent.KEY.get(world);
             MurderMayhemEvent currentEvent = murderMayhemComponent.getCurrentEvent();
             if (currentEvent != null && world instanceof ServerWorld serverWorld) {
@@ -2182,11 +2266,12 @@ public class Noellesroles implements ModInitializer {
             MurderMayhemWorldComponent.KEY.sync(world);
             if (world instanceof ServerWorld serverWorld) {
                 DeathArenaServerController.forceShutdown(serverWorld, true);
-                BreacherPlayerComponent.cleanupMarkers(serverWorld);
-                OpeningKnockbackResistanceHelper.reset(serverWorld.getServer());
+                BreacherWorldComponent.KEY.get(serverWorld).clearAll(serverWorld);
+                OpeningKnockbackSuppressionHelper.reset(serverWorld.getServer());
             }
             HiddenBodiesWorldComponent.KEY.get(world).reset();
             BodyForgeryWorldComponent.KEY.get(world).reset();
+            FerrymanPreserveWorldComponent.KEY.get(world).reset();
             LooseEndsRadarWorldComponent.KEY.get(world).reset();
             LooseEndsRadarWorldComponent.KEY.sync(world);
             AntidotePlateShieldComponent plateShieldComp = AntidotePlateShieldComponent.KEY.get(world);
@@ -2254,8 +2339,8 @@ public class Noellesroles implements ModInitializer {
 
         // 每 tick 检查时刻触发条件（tick 循环驱动，替代事件驱动）
         ServerTickEvents.END_WORLD_TICK.register(world -> {
-            // 开局刀冷却结束即摘掉击退抗性（冷却在双角色选择期间被冻结，不能按世界时间推算）
-            OpeningKnockbackResistanceHelper.tick(world.getServer());
+            // 开局刀冷却结束即离开击退压制窗口（冷却在双角色选择期间被冻结，不能按世界时间推算）
+            OpeningKnockbackSuppressionHelper.tick(world.getServer());
             for (ServerPlayerEntity player : world.getPlayers()) {
                 LooseEndPlayerComponent looseEndComponent = LooseEndPlayerComponent.KEY.get(player);
                 if (looseEndComponent.isOpeningPhased()) {
@@ -2901,6 +2986,66 @@ public class Noellesroles implements ModInitializer {
                 }
             }
         });
+        // 摆渡人技能二“不腐处理”：对瞄准的未白骨、未被自己引渡且尚未处理的尸体冻结腐化
+        ServerPlayNetworking.registerGlobalReceiver(FerrymanPreserveC2SPacket.ID, (payload, context) -> {
+            ServerPlayerEntity player = context.player();
+            if (!(player.getWorld() instanceof ServerWorld serverWorld)) {
+                return;
+            }
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(serverWorld);
+            if (!gameWorldComponent.isRole(player, FERRYMAN)
+                    || !GameFunctions.isPlayerPlayingAndAlive(player)
+                    || SwallowedPlayerComponent.isPlayerSwallowed(player)) {
+                return;
+            }
+
+            FerrymanPlayerComponent ferrymanComponent = FerrymanPlayerComponent.KEY.get(player);
+            AbilityPlayerComponent abilityPlayerComponent = AbilityPlayerComponent.KEY.get(player);
+            if (ferrymanComponent.isReactionActive() || abilityPlayerComponent.getCooldown() > 0) {
+                return;
+            }
+
+            FerrymanPreserveWorldComponent preserveComponent = FerrymanPreserveWorldComponent.KEY.get(serverWorld);
+            PlayerBodyEntity body = FerrymanHelper.findTargetBody(player, ferrymanComponent);
+            if (body != null && preserveComponent.isPreserved(body.getUuid())) {
+                body = null; // 已经处理过的尸体视为无效目标
+            }
+            if (body == null) {
+                abilityPlayerComponent.setCooldown(FerrymanPlayerComponent.EMPTY_PENALTY_TICKS);
+                return;
+            }
+
+            preserveComponent.preserve(body.getUuid(), body.age);
+
+            // 涂蜡特效（原版 WAX_ON，与蜜脾给铜涂蜡同款）：仅验尸官、杀手与中立可见，无音效
+            FerrymanWaxParticlesS2CPacket particlesPacket = new FerrymanWaxParticlesS2CPacket(body.getId());
+            for (ServerPlayerEntity viewer : serverWorld.getPlayers()) {
+                if (FerrymanPreserveWorldComponent.canSeePreserveEffects(serverWorld, viewer)) {
+                    ServerPlayNetworking.send(viewer, particlesPacket);
+                }
+            }
+
+            UUID bodyPlayerUuid = body.getPlayerUuid();
+            ServerPlayerEntity recordTarget = null;
+            if (bodyPlayerUuid != null) {
+                PlayerEntity targetPlayer = serverWorld.getPlayerByUuid(bodyPlayerUuid);
+                if (targetPlayer instanceof ServerPlayerEntity serverTarget) {
+                    recordTarget = serverTarget;
+                }
+            }
+
+            NbtCompound extra = new NbtCompound();
+            extra.putString("action", "preserve");
+            extra.putUuid("body_uuid", body.getUuid());
+            if (bodyPlayerUuid != null) {
+                extra.putUuid("body_player_uuid", bodyPlayerUuid);
+                extra.putUuid("target", bodyPlayerUuid);
+            }
+            GameRecordManager.putPos(extra, "body_pos", body.getPos());
+            GameRecordManager.recordSkillUse(player, FERRYMAN_ID, recordTarget, extra);
+            abilityPlayerComponent.setCooldown(FerrymanPlayerComponent.FERRY_COOLDOWN_TICKS);
+        });
+
         ServerPlayNetworking.registerGlobalReceiver(Noellesroles.ABILITY_PACKET, (payload, context) -> {
             AbilityPlayerComponent abilityPlayerComponent = (AbilityPlayerComponent) AbilityPlayerComponent.KEY.get(context.player());
             GameWorldComponent gameWorldComponent = (GameWorldComponent) GameWorldComponent.KEY.get(context.player().getWorld());
@@ -3051,35 +3196,6 @@ public class Noellesroles implements ModInitializer {
             if (gameWorldComponent.isRole(context.player(), BREACHER) && GameFunctions.isPlayerPlayingAndAlive(context.player()) && !SwallowedPlayerComponent.isPlayerSwallowed(context.player())) {
                 BreacherPlayerComponent breacherComp = BreacherPlayerComponent.KEY.get(context.player());
                 breacherComp.tryCreatePoint();
-            }
-            if (gameWorldComponent.isRole(context.player(), RECALLER) && abilityPlayerComponent.cooldown <= 0 && GameFunctions.isPlayerPlayingAndAlive(context.player()) && !SwallowedPlayerComponent.isPlayerSwallowed(context.player())) {
-                RecallerPlayerComponent recallerPlayerComponent = RecallerPlayerComponent.KEY.get(context.player());
-                PlayerShopComponent playerShopComponent = PlayerShopComponent.KEY.get(context.player());
-                if (!recallerPlayerComponent.placed) {
-                    abilityPlayerComponent.cooldown = GameConstants.getInTicks(0, 10);
-                    recallerPlayerComponent.setPosition();
-                    NbtCompound extra = new NbtCompound();
-                    extra.putString("action", "place");
-                    extra.putDouble("x", recallerPlayerComponent.x);
-                    extra.putDouble("y", recallerPlayerComponent.y);
-                    extra.putDouble("z", recallerPlayerComponent.z);
-                    GameRecordManager.recordSkillUse(context.player(), RECALLER_ID, null, extra);
-                } else if (playerShopComponent.balance >= 100) {
-                    playerShopComponent.balance -= 100;
-                    playerShopComponent.sync();
-                    abilityPlayerComponent.cooldown = GameConstants.getInTicks(0, 30);
-                    double targetX = recallerPlayerComponent.x;
-                    double targetY = recallerPlayerComponent.y;
-                    double targetZ = recallerPlayerComponent.z;
-                    recallerPlayerComponent.teleport();
-                    NbtCompound extra = new NbtCompound();
-                    extra.putString("action", "teleport");
-                    extra.putDouble("x", targetX);
-                    extra.putDouble("y", targetY);
-                    extra.putDouble("z", targetZ);
-                    GameRecordManager.recordSkillUse(context.player(), RECALLER_ID, null, extra);
-                }
-
             }
             if (gameWorldComponent.isRole(context.player(), PHANTOM) && abilityPlayerComponent.cooldown <= 0 && GameFunctions.isPlayerPlayingAndAlive(context.player()) && !SwallowedPlayerComponent.isPlayerSwallowed(context.player())) {
                 context.player().addStatusEffect(new StatusEffectInstance(StatusEffects.INVISIBILITY, 30 * 20, 0, true, false, true));
@@ -3281,37 +3397,38 @@ public class Noellesroles implements ModInitializer {
             }
         });
 
-        // 谎言音效师：选定玩家与音效，以该玩家为中心向附近所有玩家播放该音效
+        // 谎言音效师：选定玩家与音效，以该玩家为中心向附近所有玩家播放该音效（每个音效独立冷却）
         ServerPlayNetworking.registerGlobalReceiver(Noellesroles.PHONISM_PACKET, (payload, context) -> {
             context.server().execute(() -> {
                 ServerPlayerEntity phonism = context.player();
                 GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(phonism.getWorld());
-                AbilityPlayerComponent abilityPlayerComponent = AbilityPlayerComponent.KEY.get(phonism);
 
                 // 验证角色和状态
                 if (!gameWorldComponent.isRole(phonism, PHONISM)) return;
                 if (!GameFunctions.isPlayerPlayingAndAlive(phonism)) return;
                 if (SwallowedPlayerComponent.isPlayerSwallowed(phonism)) return;
-                if (abilityPlayerComponent.cooldown > 0) return;
 
                 // 验证音效，客户端传来的键必须在服务端枚举中
                 PhonismSound sound = PhonismSound.byKey(payload.sound());
                 if (sound == null) return;
 
-                // 验证目标
+                // 该音效独立冷却中：直接忽略，不消耗、不播放
+                PhonismPlayerComponent phonismComponent = PhonismPlayerComponent.KEY.get(phonism);
+                if (phonismComponent.getSoundCooldown(sound) > 0) return;
+
+                // 验证目标：死亡/不在对局的玩家直接拒绝且不扣冷却
                 if (payload.targetPlayer() == null) return;
+                if (!gameWorldComponent.getAllPlayers().contains(payload.targetPlayer())) return;
                 PlayerEntity target = phonism.getWorld().getPlayerByUuid(payload.targetPlayer());
                 if (target == null) return;
                 if (target.equals(phonism)) return;
+                if (!GameFunctions.isPlayerPlayingAndAlive(target)) return;
                 if (SwallowedInteractionHelper.blocksPlayerTarget(target, SwallowedInteractionHelper.TargetingRule.PHONISM_TARGET)) return;
+                if (!(target.getWorld() instanceof ServerWorld soundWorld)) return;
 
-                // 选出音效即消耗技能：目标已死亡时同样进入冷却，但不播放任何声音
-                abilityPlayerComponent.setCooldown(GameConstants.getInTicks(1, 0));
-
-                // 附近所有玩家都能听到；带时长限制的音效由 playAt 负责到点停掉
-                if (GameFunctions.isPlayerPlayingAndAlive(target) && target.getWorld() instanceof ServerWorld soundWorld) {
-                    sound.playAt(soundWorld, target.getX(), target.getY(), target.getZ());
-                }
+                // 进入该音效自己的冷却；序列音由 playSequence 负责跟随目标
+                phonismComponent.setSoundCooldown(sound, sound.cooldownTicks());
+                sound.playSequence(soundWorld, target);
 
                 NbtCompound extra = new NbtCompound();
                 extra.putString("sound", sound.key());
@@ -3596,6 +3713,54 @@ public class Noellesroles implements ModInitializer {
                             .formatted(net.minecraft.util.Formatting.GRAY),
                     true
             );
+        });
+
+        // 静语者「寂静装置」：选人菜单点击头像后，在目标玩家周围创造无声区域
+        ServerPlayNetworking.registerGlobalReceiver(SilenceZoneUseC2SPacket.ID, (payload, context) -> {
+            ServerPlayerEntity silencer = context.player();
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(silencer.getWorld());
+
+            // 验证角色和状态
+            if (!gameWorldComponent.isRole(silencer, SILENCER)) return;
+            if (!GameFunctions.isPlayerPlayingAndAlive(silencer)) return;
+            if (SwallowedPlayerComponent.isPlayerSwallowed(silencer)) return;
+
+            // 必须手持寂静装置且不在冷却中
+            boolean holding = silencer.getMainHandStack().isOf(ModItems.SILENCE_DEVICE)
+                    || silencer.getOffHandStack().isOf(ModItems.SILENCE_DEVICE);
+            if (!holding) return;
+            if (silencer.getItemCooldownManager().isCoolingDown(ModItems.SILENCE_DEVICE)) return;
+
+            // 验证目标（寂静装置可选任意存活玩家，包括自己）
+            if (payload.targetPlayer() == null) return;
+            ServerPlayerEntity target = (ServerPlayerEntity) silencer.getWorld().getPlayerByUuid(payload.targetPlayer());
+            if (target == null) return;
+            if (!GameFunctions.isPlayerPlayingAndAlive(target)) return;
+            if (SwallowedInteractionHelper.blocksPlayerTarget(target)) return;
+
+            // 创造无声区域（25 秒，半径 15 格，随目标移动）
+            SilenceZonePlayerComponent.KEY.get(target).applyZone(silencer.getUuid());
+
+            // 物品冷却 30 秒
+            silencer.getItemCooldownManager().set(ModItems.SILENCE_DEVICE, SilenceDeviceItem.COOLDOWN_TICKS);
+
+            // 给静语者发送成功提示（静语者角色色）
+            silencer.sendMessage(
+                    Text.translatable("tip.silencer.zone.success", target.getName())
+                            .withColor(SILENCER.color() & 0xFFFFFF),
+                    true
+            );
+            // 给被笼罩的目标发送提示（听不到声音，只能看消息）
+            target.sendMessage(
+                    Text.translatable("tip.silencer.zone.target")
+                            .withColor(SILENCER.color() & 0xFFFFFF),
+                    true
+            );
+
+            // 记录技能使用
+            NbtCompound extra = new NbtCompound();
+            extra.putString("action", "silence_zone");
+            GameRecordManager.recordSkillUse(silencer, SILENCER_ID, target, extra);
         });
 
         ServerPlayNetworking.registerGlobalReceiver(Noellesroles.DUAL_ROLE_CHOICE_PACKET, (payload, context) -> {
@@ -4055,6 +4220,25 @@ public class Noellesroles implements ModInitializer {
             return Text.translatable("replay.skill.noellesroles.swapper.target", actorText, target1Text, target2Text);
         });
 
+        // 静语者技能格式化器（区分普通沉默 / 寂静装置无声区域）
+        ReplayRegistry.registerSkillFormatter(SILENCER_ID, (event, match, world) -> {
+            var playerInfoCache = ReplayGenerator.getPlayerInfoCache(match);
+            NbtCompound data = event.data();
+            UUID actorUuid = data.containsUuid("actor") ? data.getUuid("actor") : null;
+            UUID targetUuid = data.containsUuid("target") ? data.getUuid("target") : null;
+
+            if (actorUuid == null || targetUuid == null) return null;
+
+            Text actorText = ReplayGenerator.formatPlayerName(actorUuid, playerInfoCache);
+            Text targetText = ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache);
+
+            String action = data.getString("action");
+            if ("silence_zone".equals(action)) {
+                return Text.translatable("replay.skill.noellesroles.silencer.silence_zone", actorText, targetText);
+            }
+            return Text.translatable("replay.skill.noellesroles.silencer.target", actorText, targetText);
+        });
+
         // 乘务员登记格式化器（见面登记 / 确认死亡 / 无法辨认的尸体）
         ReplayRegistry.registerSkillFormatter(ATTENDANT_ID, (event, match, world) -> {
             var playerInfoCache = ReplayGenerator.getPlayerInfoCache(match);
@@ -4100,7 +4284,7 @@ public class Noellesroles implements ModInitializer {
             };
         });
 
-        // 回溯者技能格式化器（双阶段：标记位置 / 传送回溯）
+        // 回溯者格式化器（锚点物品/碎片驱动：放置 / 回收 / 传送）
         ReplayRegistry.registerSkillFormatter(RECALLER_ID, (event, match, world) -> {
             var playerInfoCache = ReplayGenerator.getPlayerInfoCache(match);
             NbtCompound data = event.data();
@@ -4114,10 +4298,19 @@ public class Noellesroles implements ModInitializer {
             int z = (int) Math.floor(data.getDouble("z"));
             String coordStr = String.format("(%d, %d, %d)", x, y, z);
 
-            if ("teleport".equals(action)) {
-                return Text.translatable("replay.skill.noellesroles.recaller.teleport", actorText, coordStr);
-            } else {
-                return Text.translatable("replay.skill.noellesroles.recaller.place", actorText, coordStr);
+            switch (action) {
+                case "place" -> {
+                    return Text.translatable("replay.skill.noellesroles.recaller.place", actorText, coordStr);
+                }
+                case "retrieve" -> {
+                    return Text.translatable("replay.skill.noellesroles.recaller.retrieve", actorText, coordStr);
+                }
+                case "teleport" -> {
+                    return Text.translatable("replay.skill.noellesroles.recaller.teleport", actorText, coordStr);
+                }
+                default -> {
+                    return null;
+                }
             }
         });
 
@@ -4151,6 +4344,16 @@ public class Noellesroles implements ModInitializer {
                 int reward = data.contains("reward") ? data.getInt("reward") : 100;
                 return Text.translatable("replay.skill.noellesroles.breacher.reward", actorText, coordStr, reward);
             }
+            if ("level_repair".equals(action)) {
+                int level = data.getInt("level");
+                String levelKey = switch (level) {
+                    case 0 -> "replay.skill.noellesroles.breacher.level.primary";
+                    case 1 -> "replay.skill.noellesroles.breacher.level.secondary";
+                    default -> "replay.skill.noellesroles.breacher.level.final";
+                };
+                return Text.translatable("replay.skill.noellesroles.breacher.level_repair",
+                        actorText, Text.translatable(levelKey), coordStr);
+            }
             return Text.translatable("replay.skill.noellesroles.breacher.place", actorText, coordStr);
         });
 
@@ -4166,14 +4369,32 @@ public class Noellesroles implements ModInitializer {
                     ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache));
         });
 
-        // 谎言音效师技能格式化器（对某玩家周围施加幻听）
+        // 谎言音效师技能格式化器（对某玩家周围施加幻听 / 收集器动作）
         ReplayRegistry.registerSkillFormatter(PHONISM_ID, (event, match, world) -> {
             var playerInfoCache = ReplayGenerator.getPlayerInfoCache(match);
             NbtCompound data = event.data();
             UUID actorUuid = data.containsUuid("actor") ? data.getUuid("actor") : null;
             UUID targetUuid = data.containsUuid("target") ? data.getUuid("target") : null;
+            if (actorUuid == null) return null;
+            Text actorName = ReplayGenerator.formatPlayerName(actorUuid, playerInfoCache);
+
+            // 收集器动作：安装/回收/开关监听
+            String action = data.getString("action");
+            if (action != null && !action.isEmpty()) {
+                Text targetName = targetUuid != null
+                        ? ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache)
+                        : Text.translatable("screen.role_target.unknown_player");
+                return switch (action) {
+                    case "collector_install" -> Text.translatable("replay.skill.noellesroles.phonism.collector_install", actorName, targetName);
+                    case "collector_recover" -> Text.translatable("replay.skill.noellesroles.phonism.collector_recover", actorName, targetName);
+                    case "relay_on" -> Text.translatable("replay.skill.noellesroles.phonism.relay_on", actorName, targetName);
+                    case "relay_off" -> Text.translatable("replay.skill.noellesroles.phonism.relay_off", actorName, targetName);
+                    default -> null;
+                };
+            }
+
             PhonismSound sound = PhonismSound.byKey(data.getString("sound"));
-            if (actorUuid == null || targetUuid == null || sound == null) return null;
+            if (targetUuid == null || sound == null) return null;
 
             // 音效名用角色色高亮：回放界面按文本样式取色，写在文案里的 § 颜色码不会生效
             Text soundText = Text.literal("【")
@@ -4182,7 +4403,7 @@ public class Noellesroles implements ModInitializer {
                     .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(Noellesroles.PHONISM.color())));
 
             return Text.translatable("replay.skill.noellesroles.phonism.hallucinate",
-                    ReplayGenerator.formatPlayerName(actorUuid, playerInfoCache),
+                    actorName,
                     ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache),
                     soundText);
         });
@@ -4484,13 +4705,8 @@ public class Noellesroles implements ModInitializer {
                 return Text.translatable("replay.item_use.noellesroles.double_barrel_shotgun.reload", actorText, loadedShells);
             }
 
-            UUID targetUuid = data.containsUuid("target") ? data.getUuid("target") : null;
-            if (targetUuid == null) {
-                // 未命中改由 gun_miss 事件展示
-                return null;
-            }
-            Text targetText = ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache);
-            return Text.translatable("replay.item_use.noellesroles.double_barrel_shotgun.fire_hit", actorText, targetText);
+            // 命中击杀只由通用死亡事件展示,不产出猎枪专属回放行;未命中由 gun_miss 事件展示
+            return null;
         });
 
         ReplayRegistry.registerFormatter(org.agmas.noellesroles.entity.HunterTrapEntity.EVENT_TRIGGERED, (event, match, world) -> {
@@ -4663,6 +4879,10 @@ public class Noellesroles implements ModInitializer {
             if ("ferry".equals(action) && targetUuid != null) {
                 Text targetText = ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache);
                 return Text.translatable("replay.skill.noellesroles.ferryman.target", actorText, targetText);
+            }
+            if ("preserve".equals(action) && targetUuid != null) {
+                Text targetText = ReplayGenerator.formatPlayerName(targetUuid, playerInfoCache);
+                return Text.translatable("replay.skill.noellesroles.ferryman.preserve", actorText, targetText);
             }
             return null;
         });

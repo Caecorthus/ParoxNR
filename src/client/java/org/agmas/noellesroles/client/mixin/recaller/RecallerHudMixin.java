@@ -1,56 +1,38 @@
 package org.agmas.noellesroles.client.mixin.recaller;
 
 import dev.doctor4t.wathe.cca.GameWorldComponent;
-import dev.doctor4t.wathe.cca.PlayerShopComponent;
 import dev.doctor4t.wathe.game.GameFunctions;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
-import org.agmas.noellesroles.client.NoellesrolesClient;
 import org.agmas.noellesroles.client.util.HudRenderHelper;
-import org.agmas.noellesroles.recaller.RecallerPlayerComponent;
+import org.agmas.noellesroles.client.util.rolehud.RecallerHudRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/** 回溯者右下角 HUD；提示行与 RecallerHudRenderer.getTopY 共用 buildHintLine，绘制位置/约定沿用旧 mixin。 */
 @Mixin(InGameHud.class)
 public abstract class RecallerHudMixin {
     @Shadow public abstract TextRenderer getTextRenderer();
 
     @Inject(method = "render", at = @At("TAIL"))
-    public void phantomHud(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
-        GameWorldComponent gameWorldComponent = (GameWorldComponent) GameWorldComponent.KEY.get(MinecraftClient.getInstance().player.getWorld());
-        AbilityPlayerComponent abilityPlayerComponent = (AbilityPlayerComponent) AbilityPlayerComponent.KEY.get(MinecraftClient.getInstance().player);
-        RecallerPlayerComponent recallerPlayerComponent = RecallerPlayerComponent.KEY.get(MinecraftClient.getInstance().player);
-        PlayerShopComponent playerShopComponent = PlayerShopComponent.KEY.get(MinecraftClient.getInstance().player);
-        if (!GameFunctions.isPlayerPlayingAndAlive(MinecraftClient.getInstance().player))  return;
-        if (gameWorldComponent.isRole(MinecraftClient.getInstance().player, Noellesroles.RECALLER)) {
-            int drawY = context.getScaledWindowHeight();
+    public void recallerHud(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        ClientPlayerEntity local = MinecraftClient.getInstance().player;
+        if (local == null) return;
+        if (!GameFunctions.isPlayerPlayingAndAlive(local)) return;
+        GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(local.getWorld());
+        if (!gameWorldComponent.isRole(local, Noellesroles.RECALLER)) return;
 
-
-            Text line = Text.translatable("tip.recaller.teleport", NoellesrolesClient.abilityBind.getBoundKeyLocalizedText());
-            if (!recallerPlayerComponent.placed) {
-                line = Text.translatable("tip.recaller.place", NoellesrolesClient.abilityBind.getBoundKeyLocalizedText());
-            } else {
-                if (playerShopComponent.balance < 100) {
-                    line = Text.translatable("tip.recaller.not_enough_money");
-                }
-            }
-
-            if (abilityPlayerComponent.cooldown > 0) {
-                line = Text.translatable("tip.noellesroles.cooldown", abilityPlayerComponent.cooldown/20);
-            }
-
-            drawY -= getTextRenderer().getWrappedLinesHeight(line, 999999);
-            HudRenderHelper.drawRightAligned(context, getTextRenderer(), line, 0, drawY, Noellesroles.RECALLER.color());
-        }
+        Text line = RecallerHudRenderer.buildHintLine(local);
+        int drawY = context.getScaledWindowHeight() - getTextRenderer().getWrappedLinesHeight(line, 999999);
+        HudRenderHelper.drawRightAligned(context, getTextRenderer(), line, 0, drawY, Noellesroles.RECALLER.color());
     }
 }

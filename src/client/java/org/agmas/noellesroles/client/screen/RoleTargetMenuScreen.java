@@ -21,6 +21,7 @@ import org.agmas.noellesroles.item.ForgedPotionItem;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.agmas.noellesroles.packet.ForgedPotionSelectC2SPacket;
 import org.agmas.noellesroles.packet.MorphC2SPacket;
+import org.agmas.noellesroles.packet.SilenceZoneUseC2SPacket;
 import org.agmas.noellesroles.packet.SwapperC2SPacket;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.SwallowedInteractionHelper;
@@ -125,6 +126,8 @@ public class RoleTargetMenuScreen extends Screen {
             case MORPHLING -> gameWorld.isRole(this.player, Noellesroles.MORPHLING)
                     && MorphlingPlayerComponent.KEY.get(this.player).getMorphTicks() == 0;
             case FORGED_POTION -> gameWorld.isRole(this.player, Noellesroles.MORPHLING);
+            case SILENCE_DEVICE -> gameWorld.isRole(this.player, Noellesroles.SILENCER)
+                    && !this.player.getItemCooldownManager().isCoolingDown(ModItems.SILENCE_DEVICE);
         };
     }
 
@@ -176,6 +179,20 @@ public class RoleTargetMenuScreen extends Screen {
                     result.add(new TargetEntry(uuid, backgroundType));
                 }
             }
+            case SILENCE_DEVICE -> {
+                // 寂静装置：可选任意存活玩家（包括自己）
+                List<UUID> alivePlayers = new ArrayList<>(gameWorld.getAllAlivePlayers());
+                for (UUID uuid : WatheClient.PLAYER_ENTRIES_CACHE.keySet()) {
+                    if (!alivePlayers.contains(uuid)) {
+                        continue;
+                    }
+                    var targetPlayer = this.player.getWorld().getPlayerByUuid(uuid);
+                    if (targetPlayer != null && SwallowedInteractionHelper.blocksPlayerTarget(targetPlayer)) {
+                        continue;
+                    }
+                    result.add(new TargetEntry(uuid, ShopEntry.Type.TOOL));
+                }
+            }
         }
         return result;
     }
@@ -186,6 +203,7 @@ public class RoleTargetMenuScreen extends Screen {
             case SWAPPER -> Objects.equals(this.firstSelection, uuid) || Objects.equals(this.secondSelection, uuid);
             case MORPHLING -> false;
             case FORGED_POTION -> Objects.equals(ForgedPotionItem.getTarget(getHeldPotion()), uuid);
+            case SILENCE_DEVICE -> false;
         };
     }
 
@@ -211,6 +229,11 @@ public class RoleTargetMenuScreen extends Screen {
             }
             case FORGED_POTION -> {
                 ClientPlayNetworking.send(new ForgedPotionSelectC2SPacket(targetUuid));
+                this.close();
+            }
+            case SILENCE_DEVICE -> {
+                // 点击头像即确认使用：服务端二次校验后创造无声区域
+                ClientPlayNetworking.send(new SilenceZoneUseC2SPacket(targetUuid));
                 this.close();
             }
             case SWAPPER -> {
@@ -269,6 +292,7 @@ public class RoleTargetMenuScreen extends Screen {
             case SWAPPER -> Text.translatable("screen.role_target.swapper.subtitle");
             case MORPHLING -> Text.translatable("screen.role_target.morphling.subtitle");
             case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.subtitle");
+            case SILENCE_DEVICE -> Text.translatable("screen.role_target.silence_device.subtitle");
         };
     }
 
@@ -308,6 +332,8 @@ public class RoleTargetMenuScreen extends Screen {
                 } else {
                     lines.add(Text.translatable("item.noellesroles.forged_potion.no_target"));
                 }
+            }
+            case SILENCE_DEVICE -> {
             }
         }
         return lines;
@@ -349,7 +375,8 @@ public class RoleTargetMenuScreen extends Screen {
         VOODOO(0xFF000000 | (Noellesroles.VOODOO.color() & 0x00FFFFFF)),
         SWAPPER(0xFF000000 | (Noellesroles.SWAPPER.color() & 0x00FFFFFF)),
         MORPHLING(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF)),
-        FORGED_POTION(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF));
+        FORGED_POTION(0xFF000000 | (Noellesroles.MORPHLING.color() & 0x00FFFFFF)),
+        SILENCE_DEVICE(0xFF000000 | (Noellesroles.SILENCER.color() & 0x00FFFFFF));
 
         private final int accentColor;
 
@@ -363,6 +390,7 @@ public class RoleTargetMenuScreen extends Screen {
                 case SWAPPER -> Text.translatable("screen.role_target.swapper.title");
                 case MORPHLING -> Text.translatable("screen.role_target.morphling.title");
                 case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.title");
+                case SILENCE_DEVICE -> Text.translatable("screen.role_target.silence_device.title");
             };
         }
 
@@ -372,6 +400,7 @@ public class RoleTargetMenuScreen extends Screen {
                 case SWAPPER -> Text.translatable("screen.role_target.swapper.empty");
                 case MORPHLING -> Text.translatable("screen.role_target.morphling.empty");
                 case FORGED_POTION -> Text.translatable("screen.role_target.forged_potion.empty");
+                case SILENCE_DEVICE -> Text.translatable("screen.role_target.silence_device.empty");
             };
         }
     }

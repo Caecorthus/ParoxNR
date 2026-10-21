@@ -84,6 +84,9 @@ public final class FerrymanHelper {
             return;
         }
 
+        // 引渡优先于不腐处理：解除防腐登记，让该尸体照常加速白骨化
+        FerrymanPreserveWorldComponent.KEY.get(world).unpreserve(body.getUuid());
+
         FERRIED_BODY_PROGRESS
                 .computeIfAbsent(world, ignored -> new HashMap<>())
                 .put(body.getUuid(), new FerriedBodyProgress(body.age, world.getTime()));
@@ -132,6 +135,32 @@ public final class FerrymanHelper {
         }
     }
 
+    /**
+     * 不腐处理中的尸体：每tick把age钳制回冻结值，使其永不腐化、永远可被引渡与乘务登记。
+     * age同步沿用 {@link #syncBodyAge} 广播给所有玩家，因此不腐对全体阵营成立；
+     * “被处理过”的名单与涂蜡特效则只发给验尸官、杀手与中立（见 FerrymanPreserveWorldComponent）。
+     */
+    public static void updatePreservedBodies(ServerWorld world) {
+        FerrymanPreserveWorldComponent preserveComponent = FerrymanPreserveWorldComponent.KEY.get(world);
+        if (preserveComponent.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<UUID, Integer> entry : preserveComponent.snapshot().entrySet()) {
+            Entity entity = world.getEntity(entry.getKey());
+            if (!(entity instanceof PlayerBodyEntity body)) {
+                preserveComponent.unpreserve(entry.getKey());
+                continue;
+            }
+
+            int frozenAge = entry.getValue();
+            if (body.age > frozenAge) {
+                body.age = frozenAge;
+                syncBodyAge(world, body);
+            }
+        }
+    }
+
     private static void syncBodyAge(ServerWorld world, PlayerBodyEntity body) {
         FerrymanBodyAgeSyncS2CPacket syncPacket = new FerrymanBodyAgeSyncS2CPacket(body.getId(), body.age);
         for (ServerPlayerEntity player : world.getPlayers()) {
@@ -148,6 +177,7 @@ public final class FerrymanHelper {
      */
     public static void handleTick(ServerWorld world, GameWorldComponent gc) {
         updateFerriedBodies(world);
+        updatePreservedBodies(world);
 
         for (UUID uuid : gc.getAllWithRole(Noellesroles.FERRYMAN)) {
             PlayerEntity ferrymanEntity = world.getPlayerByUuid(uuid);

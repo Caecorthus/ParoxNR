@@ -118,6 +118,7 @@
     "voicechat.VoiceChatGuiMixin",
     "vulture.VultureHudMixin",
     "silencer.SilencerHudMixin",
+    "silencer.SilenceZoneSoundManagerMixin",
     "silencer.SilencedChatBubbleMessageMixin",
     "silencer.SilencedTalkBubbleContextMixin",
     "silencer.SilencedTalkBubbleRenderMixin",

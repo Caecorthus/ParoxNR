@@ -33,6 +33,10 @@ public abstract class MoodTaskRewardMixin {
     private float noellesroles$scaleTaskMoodGain(float original) {
         int unfinished = 0;
         for (PlayerMoodComponent.TrainTask task : this.tasks.values()) {
+            // 「去修复破坏点。」由破坏点状态强制注入且无法经任务系统完成，不计入递减档（否则破坏点存在期间其它任务回复永远被扣到最高档）
+            if (task instanceof org.agmas.noellesroles.task.RepairBreachTask) {
+                continue;
+            }
             if (!task.isFulfilled(this.player)) {
                 unfinished++;
             }

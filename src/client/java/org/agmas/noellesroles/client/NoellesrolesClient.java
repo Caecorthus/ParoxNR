@@ -36,7 +36,9 @@ import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -69,6 +71,9 @@ import org.agmas.noellesroles.util.HiddenEquipmentHelper;
 import dev.doctor4t.wathe.index.WatheItems;
 import org.agmas.noellesroles.client.screen.AssassinScreen;
 import org.agmas.noellesroles.client.screen.AttendantRegisterScreen;
+import org.agmas.noellesroles.client.screen.SchulteScreen;
+import org.agmas.noellesroles.packet.SchulteStartS2CPacket;
+import org.agmas.noellesroles.packet.SchulteResultS2CPacket;
 import org.agmas.noellesroles.client.screen.CommanderScreen;
 import org.agmas.noellesroles.client.screen.CriminalReasonerScreen;
 import org.agmas.noellesroles.client.screen.PhonismScreen;
@@ -78,6 +83,7 @@ import org.agmas.noellesroles.attendant.AttendantPlayerComponent;
 import org.agmas.noellesroles.corruptcop.CorruptCopPlayerComponent;
 import org.agmas.noellesroles.jester.JesterPlayerComponent;
 import org.agmas.noellesroles.looseend.LooseEndPlayerComponent;
+import org.agmas.noellesroles.phonism.PhonismPlayerComponent;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
 import org.agmas.noellesroles.client.renderer.EngineerDoorHighlightRenderer;
 import org.agmas.noellesroles.client.renderer.FogOfWarRenderer;
@@ -94,10 +100,13 @@ import org.agmas.noellesroles.client.util.TaotieIndicatorClientHelper;
 import org.agmas.noellesroles.packet.DualRoleOptionsS2CPacket;
 import org.agmas.noellesroles.packet.OpenVoodooPanelS2CPacket;
 import org.agmas.noellesroles.packet.OpenAssassinBookPanelS2CPacket;
+import org.agmas.noellesroles.packet.OpenSilenceZonePanelS2CPacket;
 import org.agmas.noellesroles.packet.OpenAttendantRegisterS2CPacket;
 import org.agmas.noellesroles.packet.OpenForgedPotionSelectS2CPacket;
 import org.agmas.noellesroles.packet.EngineerDoorHighlightS2CPacket;
 import org.agmas.noellesroles.packet.FerrymanBodyAgeSyncS2CPacket;
+import org.agmas.noellesroles.packet.FerrymanPreserveC2SPacket;
+import org.agmas.noellesroles.packet.FerrymanWaxParticlesS2CPacket;
 import org.agmas.noellesroles.packet.HallucinationDummyStateS2CPacket;
 import org.agmas.noellesroles.packet.HallucinationSoundS2CPacket;
 import org.agmas.noellesroles.packet.MorphCorpseToggleC2SPacket;
@@ -106,6 +115,7 @@ import org.agmas.noellesroles.packet.VultureEatC2SPacket;
 import org.agmas.noellesroles.vulture.VulturePlayerComponent;
 import org.agmas.noellesroles.packet.JunkerSearchC2SPacket;
 import org.agmas.noellesroles.packet.EconomistReportS2CPacket;
+import org.agmas.noellesroles.packet.OpeningKnockbackSuppressS2CPacket;
 import org.agmas.noellesroles.client.economist.EconomistClientState;
 import org.agmas.noellesroles.packet.ReporterMarkC2SPacket;
 import org.agmas.noellesroles.packet.SpectatorReplayDetailSyncS2CPacket;
@@ -115,6 +125,7 @@ import org.agmas.noellesroles.professor.IronManPlayerComponent;
 import org.agmas.noellesroles.toxicologist.AntidoteShieldPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.SpectatorStateHelper;
+import org.agmas.noellesroles.util.OpeningKnockbackSuppressionHelper;
 import org.agmas.noellesroles.util.SwallowedInteractionHelper;
 import org.agmas.noellesroles.taotie.TaotiePlayerComponent;
 import org.agmas.noellesroles.packet.TaotieSwallowC2SPacket;
@@ -126,6 +137,7 @@ import org.agmas.noellesroles.bodyguard.BodyguardPlayerComponent;
 import org.agmas.noellesroles.criminalreasoner.CriminalReasonerPlayerComponent;
 import org.agmas.noellesroles.entity.HunterTrapEntity;
 import org.agmas.noellesroles.ferryman.FerrymanPlayerComponent;
+import org.agmas.noellesroles.ferryman.FerrymanPreserveWorldComponent;
 import org.agmas.noellesroles.hunter.HunterPlayerComponent;
 import org.agmas.noellesroles.hallucination.HallucinationPlayerComponent;
 import org.agmas.noellesroles.hallucination.HallucinationHelper;
@@ -142,6 +154,10 @@ import net.minecraft.client.render.entity.EmptyEntityRenderer;
 import org.agmas.noellesroles.client.renderer.ThrowingAxeEntityRenderer;
 import org.agmas.noellesroles.client.roleinfo.RoleInfoRegistry;
 import org.agmas.noellesroles.client.renderer.HunterTrapEntityRenderer;
+import org.agmas.noellesroles.client.renderer.BreacherMarkerEntityRenderer;
+import org.agmas.noellesroles.client.renderer.RecallerAnchorEntityRenderer;
+import org.agmas.noellesroles.client.util.RecallerClientHelper;
+import org.agmas.noellesroles.recaller.RecallerAnchorEntity;
 import org.agmas.noellesroles.client.util.NoellesRolesItemTooltips;
 import org.lwjgl.glfw.GLFW;
 
@@ -229,6 +245,7 @@ public class NoellesrolesClient implements ClientModInitializer {
                     ClientHallucinationState.reset();
                     TaskPointHighlightManager.reset();
                     EconomistClientState.reset();
+                    OpeningKnockbackSuppressionHelper.setLocalSuppressionActive(false);
                 })
         );
 
@@ -247,6 +264,12 @@ public class NoellesrolesClient implements ClientModInitializer {
                         EconomistClientState.onReport(payload.balance(), payload.remainingTicks())
                 ));
 
+        // 开局击退压制窗口：服务端同步本人窗口状态，供攻击本地预测静音判定
+        ClientPlayNetworking.registerGlobalReceiver(OpeningKnockbackSuppressS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () ->
+                        OpeningKnockbackSuppressionHelper.setLocalSuppressionActive(payload.suppressed())
+                ));
+
         // 注册工程师门高亮 S2C 包接收
         ClientPlayNetworking.registerGlobalReceiver(EngineerDoorHighlightS2CPacket.ID,
                 (payload, context) -> runOnClient(context.client(), () ->
@@ -259,6 +282,22 @@ public class NoellesrolesClient implements ClientModInitializer {
                     if (world == null) return;
                     if (world.getEntityById(payload.entityId()) instanceof PlayerBodyEntity body) {
                         body.age = payload.age();
+                    }
+                }));
+        // 摆渡人“不腐处理”涂蜡粒子：原版蜜脾给铜方块涂蜡的同款 WAX_ON，仅验尸官/杀手/中立会收到本包
+        ClientPlayNetworking.registerGlobalReceiver(FerrymanWaxParticlesS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    var world = context.client().world;
+                    if (world == null) return;
+                    if (world.getEntityById(payload.entityId()) instanceof PlayerBodyEntity body) {
+                        Box box = body.getBoundingBox().expand(0.15D);
+                        for (int i = 0; i < 14; i++) {
+                            world.addParticle(ParticleTypes.WAX_ON,
+                                    box.minX + world.random.nextDouble() * (box.maxX - box.minX),
+                                    box.minY + world.random.nextDouble() * (box.maxY - box.minY + 0.3D),
+                                    box.minZ + world.random.nextDouble() * (box.maxZ - box.minZ),
+                                    0.0D, 0.0D, 0.0D);
+                        }
                     }
                 }));
         ClientPlayNetworking.registerGlobalReceiver(HallucinationDummyStateS2CPacket.ID,
@@ -320,6 +359,15 @@ public class NoellesrolesClient implements ClientModInitializer {
                     }
                 }));
 
+        // 注册寂静装置 S2C 包接收：右键寂静装置时由服务端通知打开选人面板
+        ClientPlayNetworking.registerGlobalReceiver(OpenSilenceZonePanelS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    MinecraftClient client = context.client();
+                    if (client.player != null) {
+                        client.setScreen(new RoleTargetMenuScreen(client.player, RoleTargetMenuScreen.MenuType.SILENCE_DEVICE));
+                    }
+                }));
+
         // 注册乘务登记表 S2C 包接收：右键登记表时由服务端通知打开登记面板
         ClientPlayNetworking.registerGlobalReceiver(OpenAttendantRegisterS2CPacket.ID,
                 (payload, context) -> runOnClient(context.client(), () -> {
@@ -338,11 +386,26 @@ public class NoellesrolesClient implements ClientModInitializer {
                     }
                 }));
 
+        // 注册舒尔特方格小游戏 S2C 包接收：右键破坏点标记后由服务端下发开局/恢复局面
+        ClientPlayNetworking.registerGlobalReceiver(SchulteStartS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () ->
+                        context.client().setScreen(new SchulteScreen(payload))));
+
+        // 小游戏结果：本等级完成/失败/超时时由服务端通知关闭界面（提示文字由服务端直接下发）
+        ClientPlayNetworking.registerGlobalReceiver(SchulteResultS2CPacket.ID,
+                (payload, context) -> runOnClient(context.client(), () -> {
+                    if (context.client().currentScreen instanceof SchulteScreen screen) {
+                        screen.handleResult(payload);
+                    }
+                }));
+
         // 注册实体渲染器
         EntityRendererRegistry.register(NoellesRolesEntities.POISON_GAS_BOMB_ENTITY, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(NoellesRolesEntities.POISON_GAS_CLOUD_ENTITY, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(NoellesRolesEntities.THROWING_AXE_ENTITY, ThrowingAxeEntityRenderer::new);
         EntityRendererRegistry.register(NoellesRolesEntities.HUNTER_TRAP_ENTITY, HunterTrapEntityRenderer::new);
+        EntityRendererRegistry.register(NoellesRolesEntities.BREACHER_MARKER_ENTITY, BreacherMarkerEntityRenderer::new);
+        EntityRendererRegistry.register(NoellesRolesEntities.RECALLER_ANCHOR_ENTITY, RecallerAnchorEntityRenderer::new);
 
         CanSeeMoney.EVENT.register(player -> {
             if (!GameFunctions.isPlayerPlayingAndAlive(player)) return null;
@@ -590,6 +653,27 @@ public class NoellesrolesClient implements ClientModInitializer {
             }
             return null;
         });
+        // 注册 GetInstinctHighlight 监听器：谎言音效师本能高亮自己收集器的持有者（含其尸体，方便回收）
+        GetInstinctHighlight.EVENT.register(entity -> {
+            PlayerEntity localPlayer = MinecraftClient.getInstance().player;
+            if (localPlayer == null) return null;
+            if (!WatheClient.isPlayerPlayingAndAlive()) return null;
+            GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(localPlayer.getWorld());
+            if (!gameWorldComponent.isRole(localPlayer, Noellesroles.PHONISM)) return null;
+            UUID collectorTarget = PhonismPlayerComponent.KEY.get(localPlayer).getCollectorTarget();
+            if (collectorTarget == null) return null;
+
+            boolean matched = switch (entity) {
+                case PlayerEntity holder -> holder.getUuid().equals(collectorTarget);
+                case PlayerBodyEntity body -> collectorTarget.equals(body.getPlayerUuid());
+                case null, default -> false;
+            };
+            if (!matched) return null;
+            return GetInstinctHighlight.HighlightResult.withKeybind(
+                    Noellesroles.PHONISM.color(),
+                    GetInstinctHighlight.HighlightResult.PRIORITY_HIGH
+            );
+        });
         // 注册 GetInstinctHighlight 监听器：秃鹫的本能高亮逻辑（尸体高亮）
         GetInstinctHighlight.EVENT.register(entity -> {
             if (!(entity instanceof PlayerBodyEntity)) return null;
@@ -633,6 +717,18 @@ public class NoellesrolesClient implements ClientModInitializer {
             if (!vultureComp.hasActiveHighlight()) return null;
             if (!GameFunctions.isPlayerPlayingAndAlive(player)) return null;
             return GetInstinctHighlight.HighlightResult.always(Noellesroles.VULTURE.color());
+        });
+        // 注册 GetInstinctHighlight 监听器：回溯碎片持有者对锚点穿墙描边（常亮、角色色）。
+        // 上面的按角色大监听器开头就按 PlayerEntity 过滤，非玩家实体必须像秃鹫/猎夹一样单开监听。
+        // 机制：Wathe MinecraftClientMixin.hasOutline + WorldRendererMixin 换色 → outline framebuffer 无深度测试=穿墙。
+        GetInstinctHighlight.EVENT.register(entity -> {
+            if (!(entity instanceof RecallerAnchorEntity)) return null;
+            ClientPlayerEntity local = MinecraftClient.getInstance().player;
+            if (local == null) return null;
+            if (!WatheClient.isPlayerPlayingAndAlive()) return null;
+            if (SpectatorStateHelper.isSpectatorLike(local)) return null;
+            if (!RecallerClientHelper.canSeeAnchor(local)) return null;
+            return GetInstinctHighlight.HighlightResult.always(Noellesroles.RECALLER.color());
         });
 
         // 注册 GetInstinctHighlight 监听器：卧底角色高亮逻辑
@@ -1150,11 +1246,10 @@ public class NoellesrolesClient implements ClientModInitializer {
                         return;
                     }
 
-                    // 谎言音效师按G打开选人+选音效界面
+                    // 谎言音效师按G打开选人+选音效界面（各音效独立冷却由按钮级控制，随时可开）
                     if (gameWorldComponent.isRole(localPlayer, Noellesroles.PHONISM)) {
                         if (GameFunctions.isPlayerPlayingAndAlive(localPlayer)
-                                && !SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)
-                                && AbilityPlayerComponent.KEY.get(localPlayer).getCooldown() <= 0) {
+                                && !SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)) {
                             client.setScreen(new PhonismScreen(localPlayer));
                         }
                         return;
@@ -1272,6 +1367,22 @@ public class NoellesrolesClient implements ClientModInitializer {
                     ClientPlayerEntity localPlayer = client.player;
                     if (localPlayer == null) return;
                     GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(localPlayer.getWorld());
+
+                    // 摆渡人按技能键2：对准未白骨、未被自己引渡且尚未处理的尸体进行不腐处理（目标由服务端射线复核）
+                    if (gameWorldComponent.isRole(localPlayer, Noellesroles.FERRYMAN)) {
+                        if (!GameFunctions.isPlayerPlayingAndAlive(localPlayer)
+                                || SwallowedPlayerComponent.isPlayerSwallowed(localPlayer)
+                                || FerrymanPlayerComponent.KEY.get(localPlayer).isReactionActive()
+                                || AbilityPlayerComponent.KEY.get(localPlayer).getCooldown() > 0) {
+                            return;
+                        }
+                        PlayerBodyEntity preserveTarget = targetBody;
+                        if (preserveTarget != null
+                                && !FerrymanPreserveWorldComponent.KEY.get(localPlayer.getWorld()).isPreserved(preserveTarget.getUuid())) {
+                            ClientPlayNetworking.send(new FerrymanPreserveC2SPacket());
+                        }
+                        return;
+                    }
 
                     // 犯罪推理学家按技能键2：消耗一次充能隐身20秒（隐身期间不可重复激活）
                     if (gameWorldComponent.isRole(localPlayer, Noellesroles.CRIMINAL_REASONER)) {

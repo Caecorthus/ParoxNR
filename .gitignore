@@ -11,3 +11,6 @@ libs/*
 bin/
 dev/
 net/
+/logs/
+/tmp/
+*.stackdump

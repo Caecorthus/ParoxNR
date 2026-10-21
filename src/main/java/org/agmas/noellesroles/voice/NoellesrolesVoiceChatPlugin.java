@@ -7,6 +7,7 @@ import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.events.*;
 import de.maxhenkel.voicechat.api.packets.Packet;
+import de.maxhenkel.voicechat.api.packets.SoundPacket;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.game.GameFunctions;
 import net.minecraft.entity.player.PlayerEntity;
@@ -16,6 +17,8 @@ import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
 import org.agmas.noellesroles.hallucination.HallucinationHelper;
 import org.agmas.noellesroles.noisemaker.NoisemakerPlayerComponent;
+import org.agmas.noellesroles.phonism.SoundCollectorHelper;
+import org.agmas.noellesroles.silencer.SilenceZonePlayerComponent;
 import org.agmas.noellesroles.silencer.SilencedPlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.agmas.noellesroles.util.SpectatorStateHelper;
@@ -360,6 +363,35 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
         }
     }
 
+    /**
+     * 寂静装置无声区域：区域内的玩家听不到任何语音（接收方向屏蔽）
+     */
+    public <T extends Packet> void blockVoiceIntoSilenceZone(SoundPacketEvent<T> event) {
+        if (event.getReceiverConnection() == null
+                || event.getReceiverConnection().getPlayer() == null
+                || event.getReceiverConnection().getPlayer().getPlayer() == null) {
+            return;
+        }
+        ServerPlayerEntity recipient = (ServerPlayerEntity) event.getReceiverConnection().getPlayer().getPlayer();
+        if (SilenceZonePlayerComponent.isPlayerInSilenceZone(recipient)) {
+            event.cancel();
+        }
+    }
+
+    /**
+     * 寂静装置无声区域：区域内的玩家说的话谁也听不到（发送方向屏蔽）
+     */
+    public void blockVoiceFromSilenceZone(MicrophonePacketEvent event) {
+        if (event.getSenderConnection() == null) return;
+        if (event.getSenderConnection().getPlayer() == null) return;
+        if (event.getSenderConnection().getPlayer().getPlayer() == null) return;
+
+        ServerPlayerEntity speaker = (ServerPlayerEntity) event.getSenderConnection().getPlayer().getPlayer();
+        if (SilenceZonePlayerComponent.isPlayerInSilenceZone(speaker)) {
+            event.cancel();
+        }
+    }
+
     public <T extends Packet> void blockVoiceToHiddenHallucinationTargets(SoundPacketEvent<T> event) {
         if (event.getReceiverConnection() == null
                 || event.getReceiverConnection().getPlayer() == null
@@ -397,6 +429,40 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
         }
     }
 
+    /**
+     * 声音收集器语音中继：把收集目标听到的语音重放到音效师本人位置（私密：仅音效师本人听到）。
+     * 注册在所有屏蔽处理器之后——事件一旦被 cancel 即停止传播，
+     * 被吞噬/沉默等拦下的包不会走到这里转发。
+     */
+    public <T extends SoundPacket> void soundCollectorRelay(SoundPacketEvent<T> event) {
+        if (!SoundCollectorHelper.hasActiveTaps()) return;
+        if (event.getReceiverConnection() == null
+                || event.getReceiverConnection().getPlayer() == null
+                || event.getReceiverConnection().getPlayer().getPlayer() == null) {
+            return;
+        }
+        // 插件自身发出的包（收集器复制等）不再二次中继，防双音效师互听成环
+        if (SoundPacketEvent.SOURCE_PLUGIN.equals(event.getSource())) return;
+
+        ServerPlayerEntity recipient = (ServerPlayerEntity) event.getReceiverConnection().getPlayer().getPlayer();
+        ServerPlayerEntity phonism = SoundCollectorHelper.getPhonismForTarget(recipient.getUuid());
+        if (phonism == null) return;
+        if (event.isCancelled()) return; // 兜底：半途被 cancel 的包不转发
+
+        // 不把音效师自己的说话声回送给他本人（否则等于给自己加一条回声）
+        UUID sender = event.getPacket().getSender();
+        if (sender != null && sender.equals(phonism.getUuid())) return;
+
+        VoicechatServerApi api = event.getVoicechat();
+        VoicechatConnection phonismCon = api.getConnectionOf(phonism.getUuid());
+        if (phonismCon == null) return;
+        // 与饕餮/大嗓门同款：重定位到音效师坐标，按语音距离播放（用户决定：不做防双音距离判定）
+        api.sendLocationalSoundPacketTo(phonismCon, event.getPacket().locationalSoundPacketBuilder()
+                .position(api.createPosition(phonism.getX(), phonism.getY(), phonism.getZ()))
+                .distance((float) api.getVoiceChatDistance())
+                .build());
+    }
+
     @Override
     public void registerEvents(EventRegistration registration) {
         registration.registerEvent(MicrophonePacketEvent.class, this::dualRoleSelectionVoiceBlock);
@@ -417,6 +483,14 @@ public class NoellesrolesVoiceChatPlugin implements VoicechatPlugin {
         registration.registerEvent(LocationalSoundPacketEvent.class, this::blockVoiceToSilencedPlayers);
         registration.registerEvent(EntitySoundPacketEvent.class, this::blockVoiceToHiddenHallucinationTargets);
         registration.registerEvent(LocationalSoundPacketEvent.class, this::blockVoiceToHiddenHallucinationTargets);
+
+        registration.registerEvent(MicrophonePacketEvent.class, this::blockVoiceFromSilenceZone);
+        registration.registerEvent(EntitySoundPacketEvent.class, this::blockVoiceIntoSilenceZone);
+        registration.registerEvent(LocationalSoundPacketEvent.class, this::blockVoiceIntoSilenceZone);
+
+        // 声音收集器中继：注册在所有屏蔽处理器之后，被 cancel（吞噬/沉默）的包不再转发
+        registration.registerEvent(EntitySoundPacketEvent.class, this::soundCollectorRelay);
+        registration.registerEvent(LocationalSoundPacketEvent.class, this::soundCollectorRelay);
 
         VoicechatPlugin.super.registerEvents(registration);
     }

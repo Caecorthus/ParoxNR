@@ -38,6 +38,10 @@ public abstract class GunMissRecordMixin {
             return;
         }
 
+        if (!missedShot) {
+            return;
+        }
+
         GameRecordManager.event("gun_miss").actor(player).put("item", itemId.toString()).record();
     }
 }

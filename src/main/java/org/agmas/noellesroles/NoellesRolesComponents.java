@@ -12,9 +12,10 @@ import org.agmas.noellesroles.bartender.BartenderPlayerComponent;
 import org.agmas.noellesroles.jester.JesterPlayerComponent;
 import org.agmas.noellesroles.pathogen.InfectedPlayerComponent;
 import org.agmas.noellesroles.pathogen.PathogenPlayerComponent;
+import org.agmas.noellesroles.phonism.PhonismPlayerComponent;
 import org.agmas.noellesroles.bomber.BomberPlayerComponent;
 import org.agmas.noellesroles.professor.IronManPlayerComponent;
-import org.agmas.noellesroles.recaller.RecallerPlayerComponent;
+import org.agmas.noellesroles.recaller.RecallerAnchorWorldComponent;
 import org.agmas.noellesroles.voodoo.VoodooPlayerComponent;
 import org.agmas.noellesroles.morphling.BodyForgeryWorldComponent;
 import org.agmas.noellesroles.morphling.MorphlingPlayerComponent;
@@ -25,6 +26,7 @@ import org.agmas.noellesroles.reporter.ReporterPlayerComponent;
 import org.agmas.noellesroles.serialkiller.SerialKillerPlayerComponent;
 import org.agmas.noellesroles.taotie.TaotiePlayerComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
+import org.agmas.noellesroles.silencer.SilenceZonePlayerComponent;
 import org.agmas.noellesroles.silencer.SilencedPlayerComponent;
 import org.agmas.noellesroles.silencer.SilencerPlayerComponent;
 import org.agmas.noellesroles.bodyguard.BodyguardPlayerComponent;
@@ -36,6 +38,7 @@ import org.agmas.noellesroles.hunter.HunterPlayerComponent;
 import org.agmas.noellesroles.orthopedist.OrthopedistPlayerComponent;
 import org.agmas.noellesroles.commander.CommanderPlayerComponent;
 import org.agmas.noellesroles.breacher.BreacherPlayerComponent;
+import org.agmas.noellesroles.breacher.BreacherWorldComponent;
 import org.agmas.noellesroles.dreameater.DreamEaterPlayerComponent;
 import org.agmas.noellesroles.dreameater.SleepingPillPlateComponent;
 import org.agmas.noellesroles.economist.EconomistPlayerComponent;
@@ -52,6 +55,7 @@ import org.agmas.noellesroles.music.WorldMusicComponent;
 import org.agmas.noellesroles.scavenger.HiddenBodiesWorldComponent;
 import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
 import org.agmas.noellesroles.ferryman.FerrymanPlayerComponent;
+import org.agmas.noellesroles.ferryman.FerrymanPreserveWorldComponent;
 import org.agmas.noellesroles.gangsterstar.GangsterStarPlayerComponent;
 import org.agmas.noellesroles.hallucination.HallucinationPlayerComponent;
 import org.agmas.noellesroles.killerhistory.KillerHistoryPlayerComponent;
@@ -75,7 +79,6 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         registry.beginRegistration(PlayerEntity.class, VoodooPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(VoodooPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, AttendantPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(AttendantPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, AbilityPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(AbilityPlayerComponent::new);
-        registry.beginRegistration(PlayerEntity.class, RecallerPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(RecallerPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, VulturePlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(VulturePlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, JesterPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(JesterPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, InfectedPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(InfectedPlayerComponent::new);
@@ -89,6 +92,7 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         registry.beginRegistration(PlayerEntity.class, TaotiePlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(TaotiePlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, SwallowedPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(SwallowedPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, SilencedPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(SilencedPlayerComponent::new);
+        registry.beginRegistration(PlayerEntity.class, SilenceZonePlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(SilenceZonePlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, SilencerPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(SilencerPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, BodyguardPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(BodyguardPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, NoisemakerPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(NoisemakerPlayerComponent::new);
@@ -113,6 +117,7 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         registry.beginRegistration(PlayerEntity.class, AntidoteShieldPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(AntidoteShieldPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, DreamEaterPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(DreamEaterPlayerComponent::new);
         registry.beginRegistration(PlayerEntity.class, BanditPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(BanditPlayerComponent::new);
+        registry.beginRegistration(PlayerEntity.class, PhonismPlayerComponent.KEY).respawnStrategy(RespawnCopyStrategy.NEVER_COPY).end(PhonismPlayerComponent::new);
     }
 
     @Override
@@ -128,5 +133,8 @@ public class NoellesRolesComponents implements EntityComponentInitializer, World
         worldComponentFactoryRegistry.register(DualRoleSelectionWorldComponent.KEY, DualRoleSelectionWorldComponent::new);
         worldComponentFactoryRegistry.register(AntidotePlateShieldComponent.KEY, AntidotePlateShieldComponent::new);
         worldComponentFactoryRegistry.register(SleepingPillPlateComponent.KEY, SleepingPillPlateComponent::new);
+        worldComponentFactoryRegistry.register(BreacherWorldComponent.KEY, BreacherWorldComponent::new);
+        worldComponentFactoryRegistry.register(RecallerAnchorWorldComponent.KEY, RecallerAnchorWorldComponent::new);
+        worldComponentFactoryRegistry.register(FerrymanPreserveWorldComponent.KEY, FerrymanPreserveWorldComponent::new);
     }
 }

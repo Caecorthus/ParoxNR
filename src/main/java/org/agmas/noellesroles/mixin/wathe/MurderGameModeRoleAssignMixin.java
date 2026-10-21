@@ -12,7 +12,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import org.agmas.noellesroles.dualrole.DualRoleSelectionWorldComponent;
-import org.agmas.noellesroles.util.OpeningKnockbackResistanceHelper;
+import org.agmas.noellesroles.util.OpeningKnockbackSuppressionHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -49,12 +49,12 @@ public abstract class MurderGameModeRoleAssignMixin {
         gameWorldComponent.setInitialKillerCount(killerCount);
 
         // Set item cooldowns (from original initializeGame)
-        OpeningKnockbackResistanceHelper.reset(serverWorld.getServer());
+        OpeningKnockbackSuppressionHelper.reset(serverWorld.getServer());
         for (ServerPlayerEntity player : players) {
             player.getItemCooldownManager().set(WatheItems.REVOLVER, GameConstants.getInTicks(1, 0));
-            // 开局刀冷却45秒；冷却期间全员获得击退抗性
-            player.getItemCooldownManager().set(WatheItems.KNIFE, OpeningKnockbackResistanceHelper.OPENING_KNIFE_COOLDOWN_TICKS);
-            OpeningKnockbackResistanceHelper.startOpeningWindow(player);
+            // 开局刀冷却45秒；冷却期间禁用持械近战击退与出拳放行（持刀且刀不在冷却时恢复击退）
+            player.getItemCooldownManager().set(WatheItems.KNIFE, OpeningKnockbackSuppressionHelper.OPENING_KNIFE_COOLDOWN_TICKS);
+            OpeningKnockbackSuppressionHelper.startOpeningWindow(player);
         }
 
         // Check if dual role selection is active (set by ON_GAME_START)

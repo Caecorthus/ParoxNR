@@ -36,7 +36,7 @@
       "noellesroles:attendant",
       "noellesroles:config",
       "noellesroles:body_death_reason",
-      "noellesroles:recaller",
+      "noellesroles:recaller_anchor",
       "noellesroles:vulture",
       "noellesroles:jester",
       "noellesroles:infected",
@@ -53,6 +53,7 @@
       "noellesroles:swallowed",
       "noellesroles:silenced",
       "noellesroles:silencer",
+      "noellesroles:silence_zone",
       "noellesroles:bodyguard",
       "noellesroles:noisemaker",
       "noellesroles:survival_master",
@@ -67,6 +68,7 @@
       "noellesroles:gangster_star",
       "noellesroles:commander",
       "noellesroles:breacher",
+      "noellesroles:breacher_world",
       "noellesroles:junker",
       "noellesroles:junker_loot",
       "noellesroles:economist",
@@ -85,7 +87,9 @@
         "noellesroles:sleeping_pill_plate",
         "noellesroles:bandit",
         "noellesroles:morphling_scramble",
-        "noellesroles:body_forgery"
+        "noellesroles:body_forgery",
+        "noellesroles:ferryman_preserve",
+        "noellesroles:phonism"
       ]
   },
   "mixins": [

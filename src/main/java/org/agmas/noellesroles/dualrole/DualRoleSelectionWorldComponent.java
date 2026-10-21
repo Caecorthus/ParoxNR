@@ -21,6 +21,7 @@ import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.packet.DualRoleOptionsS2CPacket;
 import org.agmas.noellesroles.rolehistory.RoleHistoryCalculator;
 import org.agmas.noellesroles.rolehistory.RoleHistoryPlayerComponent;
+import org.agmas.noellesroles.util.ForcedRoleTracker;
 import org.agmas.noellesroles.util.MatchRecordTimeShift;
 import org.agmas.noellesroles.util.RoleUtils;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -139,8 +140,10 @@ public class DualRoleSelectionWorldComponent implements AutoSyncedComponent {
         for (UUID uuid : allPlayers) {
             Role role = PENDING_ASSIGNMENTS.get(uuid);
             if (role == null) continue;
+            if (ForcedRoleTracker.isForced(uuid)) continue; // 被 wathe:forceRole 指定角色的玩家不参与开局双选
             if (Noellesroles.isFixedDualRoleSlot(role)) continue;
             FactionGroup fg = getFactionGroup(role);
+            if (fg == FactionGroup.INNOCENT) continue; // 乘客阵营不参与开局双选
             factionPlayers.computeIfAbsent(fg, k -> new ArrayList<>()).add(uuid);
         }
 

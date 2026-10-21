@@ -16,6 +16,7 @@ import org.agmas.noellesroles.killerhistory.KillerHistoryCalculator;
 import org.agmas.noellesroles.killerhistory.KillerHistoryPlayerComponent;
 import org.agmas.noellesroles.rolehistory.RoleHistoryCalculator;
 import org.agmas.noellesroles.rolehistory.RoleHistoryPlayerComponent;
+import org.agmas.noellesroles.util.ForcedRoleTracker;
 import org.agmas.noellesroles.util.RoleUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -35,6 +36,23 @@ import java.util.UUID;
 
 @Mixin(ScoreboardRoleSelectorComponent.class)
 public abstract class ScoreboardRoleSelectorComponentMixin {
+
+    /**
+     * 留档本局被 /wathe:forceRole 指定角色的玩家：assignForcedRoles 发放后会清空 forcedRoles，
+     * 后续警类分配、列车长保底与开局双选据 ForcedRoleTracker 跳过这些玩家。
+     */
+    @Inject(method = "assignForcedRoles", at = @At("HEAD"))
+    private void noellesroles$recordForcedPlayers(ServerWorld world, GameWorldComponent gameWorld,
+            List<ServerPlayerEntity> players, CallbackInfo ci) {
+        ScoreboardRoleSelectorComponent self = (ScoreboardRoleSelectorComponent) (Object) this;
+        Set<UUID> forced = new HashSet<>();
+        for (ServerPlayerEntity player : players) {
+            if (self.getForcedRoleForPlayer(player.getUuid()) != null) {
+                forced.add(player.getUuid());
+            }
+        }
+        ForcedRoleTracker.record(forced);
+    }
 
     /**
      * 按玩家杀手历史动态加权选取杀手，取代 vanilla 的均匀随机选取。
@@ -253,6 +271,7 @@ public abstract class ScoreboardRoleSelectorComponentMixin {
         int slot = 0;
         for (ServerPlayerEntity player : available) {
             if (slot >= queue.size()) break;
+            if (ForcedRoleTracker.isForced(player.getUuid())) continue; // 被 forceRole 指定的玩家不占警类名额（兜底，正常已在强制阶段拿到角色）
             gameWorld.addRole(player, queue.get(slot));
             slot++;
         }
@@ -327,6 +346,9 @@ public abstract class ScoreboardRoleSelectorComponentMixin {
             }
             if (role.equals(Noellesroles.CONDUCTOR)) {
                 return;
+            }
+            if (ForcedRoleTracker.isForced(player.getUuid())) {
+                continue; // 被 forceRole 指定的玩家不能被改为列车长
             }
             if (role.equals(WatheRoles.CIVILIAN)) {
                 vanillaCivilianCandidates.add(player);

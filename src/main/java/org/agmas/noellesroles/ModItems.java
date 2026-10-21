@@ -24,7 +24,9 @@ import org.agmas.noellesroles.item.RepairToolItem;
 import org.agmas.noellesroles.item.RiotForkItem;
 import org.agmas.noellesroles.item.RiotShieldItem;
 import org.agmas.noellesroles.item.ShopIconItem;
+import org.agmas.noellesroles.item.SilenceDeviceItem;
 import org.agmas.noellesroles.item.SleepingPillItem;
+import org.agmas.noellesroles.item.SoundCollectorItem;
 import org.agmas.noellesroles.item.ThrowingAxeItem;
 import org.agmas.noellesroles.item.HunterTrapItem;
 import org.agmas.noellesroles.item.DoubleBarrelShotgunItem;
@@ -35,6 +37,8 @@ import org.agmas.noellesroles.item.MedicalSplintItem;
 import org.agmas.noellesroles.item.BaseSpiritItem;
 import org.agmas.noellesroles.item.IngredientItem;
 import org.agmas.noellesroles.item.VoodooDollItem;
+import org.agmas.noellesroles.item.RecallerAnchorItem;
+import org.agmas.noellesroles.item.RewindShardItem;
 import org.agmas.noellesroles.item.ingredient.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -199,6 +203,31 @@ public class ModItems {
     public static final Item ASSASSIN_BOOK = registerHidden(
             new AssassinBookItem(new Item.Settings().maxCount(1)),
             "assassin_book"
+    );
+
+    // ---- 静语者系统 ----
+    // 静语者商店购买道具，隐藏于创造模式物品栏
+    public static final Item SILENCE_DEVICE = registerHidden(
+            new SilenceDeviceItem(new Item.Settings().maxCount(1)),
+            "silence_device"
+    );
+
+    // ---- 回溯者系统 ----
+    // 商店购买道具，隐藏于创造模式物品栏
+    public static final Item RECALLER_ANCHOR = registerHidden(
+            new RecallerAnchorItem(new Item.Settings().maxCount(1)),
+            "recaller_anchor"
+    );
+    public static final Item REWIND_SHARD = registerHidden(
+            new RewindShardItem(new Item.Settings().maxCount(16)),
+            "rewind_shard"
+    );
+
+    // ---- 谎言音效师系统 ----
+    // 音效师商店购买道具，隐藏于创造模式物品栏
+    public static final Item SOUND_COLLECTOR = registerHidden(
+            new SoundCollectorItem(new Item.Settings().maxCount(1)),
+            "sound_collector"
     );
 
     // ---- 乘务员系统 ----

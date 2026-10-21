@@ -10,6 +10,8 @@ import org.agmas.noellesroles.entity.PoisonGasBombEntity;
 import org.agmas.noellesroles.entity.PoisonGasCloudEntity;
 import org.agmas.noellesroles.entity.ThrowingAxeEntity;
 import org.agmas.noellesroles.entity.HunterTrapEntity;
+import org.agmas.noellesroles.breacher.BreacherMarkerEntity;
+import org.agmas.noellesroles.recaller.RecallerAnchorEntity;
 
 public class NoellesRolesEntities {
     public static final EntityType<RoleMineEntity> ROLE_MINE_ENTITY_ENTITY_TYPE = Registry.register(
@@ -41,6 +43,19 @@ public class NoellesRolesEntities {
             Registries.ENTITY_TYPE,
             Identifier.of(Noellesroles.MOD_ID, "hunter_trap"),
             EntityType.Builder.<HunterTrapEntity>create(HunterTrapEntity::new, SpawnGroup.MISC).dimensions(0.6f, 0.1f).build("hunter_trap")
+    );
+
+    public static final EntityType<BreacherMarkerEntity> BREACHER_MARKER_ENTITY = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Noellesroles.MOD_ID, "breacher_marker"),
+            EntityType.Builder.<BreacherMarkerEntity>create(BreacherMarkerEntity::new, SpawnGroup.MISC).dimensions(0.5f, 0.5f).build("breacher_marker")
+    );
+
+    // maxTrackingRange(128) 照抄 Wathe 实体先例：锚点需全图被所有客户端追踪，否则远距离描边不出现
+    public static final EntityType<RecallerAnchorEntity> RECALLER_ANCHOR_ENTITY = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Noellesroles.MOD_ID, "recaller_anchor"),
+            EntityType.Builder.<RecallerAnchorEntity>create(RecallerAnchorEntity::new, SpawnGroup.MISC).dimensions(0.5f, 0.5f).maxTrackingRange(128).build("recaller_anchor")
     );
 
     public static void init() {}

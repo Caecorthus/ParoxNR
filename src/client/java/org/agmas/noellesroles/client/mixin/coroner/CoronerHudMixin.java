@@ -19,6 +19,7 @@ import net.minecraft.util.hit.HitResult;
 import org.agmas.noellesroles.AbilityPlayerComponent;
 import org.agmas.noellesroles.Noellesroles;
 import org.agmas.noellesroles.client.NoellesrolesClient;
+import org.agmas.noellesroles.ferryman.FerrymanPreserveWorldComponent;
 import org.agmas.noellesroles.taotie.SwallowedPlayerComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -57,6 +58,13 @@ public abstract class CoronerHudMixin {
                         context.drawTextWithShadow(renderer, name, -renderer.getWidth(name) / 2, 32, Colors.YELLOW);
                         context.getMatrices().pop();
                         return;
+                    }
+                    // 摆渡人不腐处理：理智足够的验尸官查验被处理过的尸体时，在死亡信息行下方追加一行提示
+                    PlayerBodyEntity viewedBody = NoellesrolesClient.targetBody;
+                    if (viewedBody != null
+                            && FerrymanPreserveWorldComponent.KEY.get(player.getWorld()).isPreserved(viewedBody.getUuid())) {
+                        Text preservedText = Text.translatable("hud.coroner.preserved_body");
+                        context.drawTextWithShadow(renderer, preservedText, -renderer.getWidth(preservedText) / 2, 48, Noellesroles.FERRYMAN.color());
                     }
                 }
                 // 秃鹫专属提示

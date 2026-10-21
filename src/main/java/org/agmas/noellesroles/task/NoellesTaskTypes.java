@@ -82,6 +82,12 @@ public final class NoellesTaskTypes {
         /** 该类型的枚举槽位；枚举扩展完成后才会被赋值。 */
         public PlayerMoodComponent.Task slot() {
             if (this.slot == null) {
+                // 枚举扩展挂在 Task.<clinit> 的 TAIL 注入上；若本会话还没有任何代码碰过
+                // PlayerMoodComponent.Task（典型场景：专用服务器重启后零玩家直接 finalize），
+                // 枚举类尚未初始化，这里主动触碰一次，触发 <clinit> 并由 extendEnum 回填 slot。
+                PlayerMoodComponent.Task.values();
+            }
+            if (this.slot == null) {
                 throw new IllegalStateException("task type '" + this.id + "' has no slot: enum extension did not run");
             }
             return this.slot;
@@ -126,6 +132,14 @@ public final class NoellesTaskTypes {
     public static final TaskType DREAM_SLEEP = register("dream_sleep", DreamSleepTask::fromNbt, true, true);
 
     /**
+     * 破袭者破坏点联动任务「去修复破坏点。」：有破坏点存在时注入全体真实/假心情玩家，
+     * 全部修复后移除。文案走原版前缀机制（task.feel / task.fake + task.repair_breach），
+     * 不参与随机任务刷新，也不计入理智下降的任务数倍率
+     * （见 {@code MoodDrainRepairTaskExemptMixin}）。
+     */
+    public static final TaskType REPAIR_BREACH = register("repair_breach", RepairBreachTask::fromNbt);
+
+    /**
      * 注册一个任务类型，沿用原版任务行表现（带前缀、允许任务点提示）。
      *
      * @param id      类型标识，同时是 {@code task.<id>} 语言键与 HUD 任务名
@@ -156,7 +170,7 @@ public final class NoellesTaskTypes {
         return task != null && indexOf(task) >= 0;
     }
 
-    /** 是否是噬梦者的睡觉任务（本模组唯一的自定义任务类型）。按语义判定，不按槽位下标。 */
+    /** 是否是噬梦者的睡觉任务。按语义判定，不按槽位下标。 */
     public static boolean isDreamSleepTask(@Nullable PlayerMoodComponent.Task task) {
         return task != null && DREAM_SLEEP.slot == task;
     }
