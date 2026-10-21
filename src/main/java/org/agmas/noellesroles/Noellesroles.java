@@ -2097,6 +2097,7 @@ public class Noellesroles implements ModInitializer {
             DoorInteraction.DoorType doorType = context.getDoorType();
             if (handItem.isOf(ModItems.MASTER_KEY)) {
                 if (doorType == DoorInteraction.DoorType.TRAIN_DOOR || context.requiresKey()) {
+                    playMasterKeyDoorSound(context);
                     return DoorInteraction.DoorInteractionResult.ALLOW;
                 }
             }
@@ -2107,13 +2108,16 @@ public class Noellesroles implements ModInitializer {
                 Role playerRole = gameWorld.getRole(player);
                 if (NEUTRAL_MASTER_KEY_ROLES.contains(playerRole)) {
                     player.getItemCooldownManager().set(ModItems.NEUTRAL_MASTER_KEY, 200);
+                    playMasterKeyDoorSound(context);
                     return DoorInteraction.DoorInteractionResult.ALLOW;
                 } else if (gameWorld.isRole(player, Noellesroles.JUNKER)) {
                     // 拾荒者：搜刮所得的中立万能钥匙开门后即销毁，因此不设冷却
+                    playMasterKeyDoorSound(context);
                     return DoorInteraction.DoorInteractionResult.ALLOW;
                 } else if ((gameWorld.isRole(player, Noellesroles.CORRUPT_COP) || gameWorld.isRole(player, Noellesroles.GANGSTER_STAR))
                         && doorType == DoorInteraction.DoorType.SMALL_DOOR) {
                     player.getItemCooldownManager().set(ModItems.NEUTRAL_MASTER_KEY, 200);
+                    playMasterKeyDoorSound(context);
                     return DoorInteraction.DoorInteractionResult.ALLOW;
                 }
             }
@@ -2486,6 +2490,13 @@ public class Noellesroles implements ModInitializer {
             if (role.identifier().equals(id)) return role;
         }
         return null;
+    }
+
+    // 万能钥匙开门走 ALLOW，Wathe 只为 USE_KEY 播音效，这里补上与普通钥匙相同的开门声
+    private static void playMasterKeyDoorSound(DoorInteraction.DoorInteractionContext context) {
+        net.minecraft.util.math.BlockPos lowerPos = context.getLowerPos();
+        context.getWorld().playSound(null, lowerPos.getX() + .5f, lowerPos.getY() + 1, lowerPos.getZ() + .5f,
+                WatheSounds.ITEM_KEY_DOOR, SoundCategory.BLOCKS, 1f, 1f);
     }
 
     private static void movePlayerIntoReadyArea(ServerPlayerEntity player, MinecraftServer server) {
